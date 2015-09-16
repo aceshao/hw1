@@ -1,7 +1,9 @@
 #include <unistd.h>
 #include <errno.h>
 #include <iostream>
-
+#include <string.h>
+#include <string>
+#include <cstdlib>
 #include "manager.h"
 #include "config.h"
 
@@ -78,12 +80,12 @@ int ResourceManager::Update(PeerInfo* pi)
 	return 0;
 }
 
-int ResourceManager::UpdateAckTime(unsigned int time, PeerInfo* pi)
+int ResourceManager::UpdateAckTime(unsigned int time, string ip, int port)
 {
 	m_mtxResource->Lock();
 	for(unsigned int i = 0; i < m_vecPeerInfo.size(); i++)
 	{
-		if(pi->ip == m_vecPeerInfo[i]->ip && pi->port == m_vecPeerInfo[i]->port)
+		if(ip == m_vecPeerInfo[i]->ip && port == m_vecPeerInfo[i]->port)
 		{
 			m_vecPeerInfo[i]->ackTime = time;
 			m_mtxResource->Unlock();
@@ -181,6 +183,7 @@ int Manager::Listen()
 		cout<<"socket listen failed"<<endl;
 		return -1;
 	}
+	cout<<"now begin listen"<<endl;
 	return 0;
 }
 
@@ -250,7 +253,9 @@ void* Process(void* arg)
 		{
 			case MSG_CMD_ACK:
 			{
-				pmgr->m_pResMan.UpdateAckTime(time(NULL));
+				string ip = client->GetIp();
+				int port = client->GetPort();
+				pmgr->m_pResMan.UpdateAckTime(time(NULL), ip, port);
 				break;
 			}
 			case MSG_CMD_SEARCH:
@@ -270,7 +275,7 @@ void* Process(void* arg)
 					msg->msglength = pi->ip.length() + 4;
 					SearchResponsePkg* resp = (SearchResponsePkg*)(szBack + sizeof(MsgPkg));
 					resp->port = pi->port;
-					strncpy(resp->ip, pi->ip, pi->ip.length());
+					strncpy(resp->ip, pi->ip.c_str(), pi->ip.length());
 					client->Send(szBack, pkglen);
 					delete szBack;
 					delete client;
@@ -280,7 +285,7 @@ void* Process(void* arg)
 			case MSG_CMD_REGISTER:
 			{
 				PeerInfo* pi = new PeerInfo;
-				pi->PeerStatus = ONLINE;
+				pi->ps= ONLINE;
 				pi->ackTime = time(NULL);
 
 				
@@ -291,7 +296,7 @@ void* Process(void* arg)
 				int index = 0;
 				for(; index < msg->msglength; )
 				{
-					int filenameLen = stoi(filenames.substr(index, 4));
+					int filenameLen = atoi(filenames.substr(index, 4).c_str());
 					index += 4;
 					pi->files.push_back(filenames.substr(index, filenameLen));
 					index += filenameLen;
@@ -305,6 +310,7 @@ void* Process(void* arg)
 		}
 		delete szData;
 	}
+return 0;
 }
 
 

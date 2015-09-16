@@ -110,7 +110,7 @@ int Socket::Close()
 string Socket::GetIp()
 {
     struct sockaddr_in clientaddr;
-    bzero(*clientaddr, sizeof(clientaddr));
+    bzero(&clientaddr, sizeof(clientaddr));
     socklen_t len = sizeof(clientaddr);
     GetPeerName((struct sockaddr*) &clientaddr, &len);
     return inet_ntoa(clientaddr.sin_addr);
@@ -119,7 +119,7 @@ string Socket::GetIp()
 int Socket::GetPort()
 {
     struct sockaddr_in clientaddr;
-    bzero(*clientaddr, sizeof(clientaddr));
+    bzero(&clientaddr, sizeof(clientaddr));
     socklen_t len = sizeof(clientaddr);
     GetPeerName((struct sockaddr*) &clientaddr, &len);
     return ntohs(clientaddr.sin_port);;

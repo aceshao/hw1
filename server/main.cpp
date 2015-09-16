@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include "manager.h"
 #include <errno.h>
+#include <unistd.h>
 
 int Daemon(int maxfd, int coredump)
 {
@@ -29,12 +30,13 @@ int Daemon(int maxfd, int coredump)
 		}
 	}
 
-	return daemon(1, 0);
+//	return daemon(1, 0);
+	return 0;
 }
 
 int main()
 {
-	if(daemon(1024, 1) < 0)
+	if(Daemon(1024, 1) < 0)
 	{
 		printf("daemon start failed");
 		return -1;
@@ -42,6 +44,11 @@ int main()
 
 	Manager manager;
 	manager.Start();
+	
+	while(1)
+	{
+           sleep(2);
+	}
 	
 	// it should never return
 	return -1;
