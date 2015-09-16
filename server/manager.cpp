@@ -236,7 +236,7 @@ void* Process(void* arg)
 			continue;
 		}
 		MsgPkg* msg = (MsgPkg*)szBuffer;
-		char* szData = new char(msg->msglength + 1);
+		char* szData = new char[msg->msglength + 1];
 		bzero(szData, msg->msglength + 1);
 		if(msg->msglength != 0)
 		{
@@ -244,7 +244,7 @@ void* Process(void* arg)
 			{
 				cout<<"recv failed"<<endl;
 				client->Close();
-				delete szData;
+				delete [] szData;
 				continue;
 			}
 		}
@@ -256,6 +256,7 @@ void* Process(void* arg)
 				string ip = client->GetIp();
 				int port = client->GetPort();
 				pmgr->m_pResMan.UpdateAckTime(time(NULL), ip, port);
+				client->Close();
 				break;
 			}
 			case MSG_CMD_SEARCH:
@@ -269,7 +270,7 @@ void* Process(void* arg)
 				{
 					// calculate the response packet lenght
 					int pkglen = sizeof(MsgPkg) + pi->ip.length() + 4;
-					char* szBack = new char(pkglen);
+					char* szBack = new char[pkglen];
 					MsgPkg* msg = (MsgPkg*)szBack;
 					msg->msgcmd = MSG_CMD_SEARCH_RESPONSE;
 					msg->msglength = pi->ip.length() + 4;
@@ -277,8 +278,20 @@ void* Process(void* arg)
 					resp->port = pi->port;
 					strncpy(resp->ip, pi->ip.c_str(), pi->ip.length());
 					client->Send(szBack, pkglen);
-					delete szBack;
-					delete client;
+					delete [] szBack;
+					client->Close();
+					break;
+				}
+				else
+				{
+					int pkglen = sizeof(MsgPkg);
+					char* szBack = new char[pkglen];
+					MsgPkg* msg = (MsgPkg*)szBack;
+					msg->msgcmd = MSG_CMD_SEARCH_RESPONSE;
+					msg->msglength = 0; // length = 0 means there is no available file
+					client->Send(szBack, pkglen);
+					delete [] szBack;
+					client->Close();
 					break;
 				}
 			}
@@ -303,12 +316,15 @@ void* Process(void* arg)
 				}
 
 				pmgr->m_pResMan.Update(pi);
+				client->Close();
 				break;
 			}
 			default:
 			cout<<"msg not support"<<endl;
+			client->Close();
 		}
-		delete szData;
+		delete [] szData;
+		delete client;
 	}
 return 0;
 }
