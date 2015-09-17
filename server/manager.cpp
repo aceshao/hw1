@@ -41,7 +41,7 @@ int ResourceManager::Insert(PeerInfo* pi)
 	return 0;
 }
 
-int ResourceManager::LookUp(string filename, PeerInfo* pi)
+int ResourceManager::LookUp(string filename, PeerInfo** pi)
 {
 	m_mtxResource->Lock();
 	for(unsigned int i = 0; i < m_vecPeerInfo.size(); i++)
@@ -52,7 +52,7 @@ int ResourceManager::LookUp(string filename, PeerInfo* pi)
 			if(m_vecPeerInfo[i]->files[j] == filename)
 			{
 				cout<<"found.....!!!!"<<endl;
-				pi = m_vecPeerInfo[i];
+				*pi = m_vecPeerInfo[i];
 				m_mtxResource->Unlock();
 				return 0;				
 			}
@@ -269,7 +269,7 @@ void* Process(void* arg)
 				string searchFilename = szData;
 				cout<<"begin to search file["<< searchFilename<<"]"<<endl;
 				PeerInfo* pi = NULL;
-				pmgr->m_pResMan.LookUp(searchFilename, pi);
+				pmgr->m_pResMan.LookUp(searchFilename, &pi);
 				cout<<"after lookup"<<endl;
 
 				if(! pi)
@@ -311,13 +311,14 @@ void* Process(void* arg)
 				pi->ps= ONLINE;
 				pi->ackTime = time(NULL);
 
-				
+				RegisterPkg* reg = (RegisterPkg*)szData;
 				pi->ip = client->GetIp();
-				pi->port = client->GetPort();
+				pi->port = reg->port;
+				cout<<"register ip["<<pi->ip<<"] port["<<pi->port<<"]"<<endl;
 
-				string filenames = szData;
+				string filenames = reg->filename;
 				int index = 0;
-				for(; index < msg->msglength; )
+				for(; index < msg->msglength - 4; )
 				{
 					int filenameLen = atoi(filenames.substr(index, 4).c_str());
 					index += 4;

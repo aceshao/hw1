@@ -189,7 +189,8 @@ void* Process(void* arg)
 			{
 				string downloadFilename = szData;
 				delete [] szData;
-
+				
+				cout<<"request to download file["<<downloadFilename<<"]"<<endl;
 				string dirname = "";
 				DIR* dir = NULL;
 				struct dirent* direntry;
@@ -197,14 +198,12 @@ void* Process(void* arg)
 				if((dir = opendir(fileBufferDir)) != NULL)
 				{
 					bool findDownloadFile = false;
-					int fileLen = 0;
 					while((direntry = readdir(dir)) != NULL)
 					{
 						string fn = direntry->d_name;
 						if(fn == downloadFilename)
 						{
 							findDownloadFile = true;
-							fileLen = direntry->d_reclen;
 							break;
 						}
 					}
@@ -214,10 +213,14 @@ void* Process(void* arg)
 						strncpy(filepath, fileBufferDir, 99);
 						strncpy(filepath+strlen(fileBufferDir), downloadFilename.c_str(), 99 - strlen(fileBufferDir));
 						ifstream istream (filepath, std::ifstream::binary);
+						istream.seekg(0, istream.end);
+						int fileLen = istream.tellg();
+						istream.seekg(0, istream.beg);
 						char* buffer = new char[fileLen + sizeof(MsgPkg)];
 						MsgPkg* msg = (MsgPkg*)buffer;
 						msg->msgcmd = MSG_CMD_DOWNLOAD_RESPONSE;
 						msg->msglength = fileLen;
+						cout<<"file len["<<fileLen<<"]"<<endl;
 						istream.read(buffer + sizeof(MsgPkg), fileLen);
 						istream.close();
 
@@ -229,7 +232,7 @@ void* Process(void* arg)
 						char buffer[MSG_HEAD_LEN] = {0};
 						MsgPkg* msg = (MsgPkg*)buffer;
 						msg->msgcmd = MSG_CMD_DOWNLOAD_RESPONSE;
-						msg->msglength = 0;
+						msg->msglength = -1;
 						client->Send(buffer, MSG_HEAD_LEN);
 					}
 				}
@@ -238,7 +241,7 @@ void* Process(void* arg)
 					char buffer[MSG_HEAD_LEN] = {0};
 					MsgPkg* msg = (MsgPkg*)buffer;
 					msg->msgcmd = MSG_CMD_DOWNLOAD_RESPONSE;
-					msg->msglength = 0;
+					msg->msglength = -1;
 					client->Send(buffer, MSG_HEAD_LEN);
 				}
 				client->Close();
@@ -260,8 +263,9 @@ int Manager::Register()
 	char* registerPkg = new char[MAX_PKG_LEN];
 	MsgPkg* msg = (MsgPkg*)registerPkg;
 	msg->msgcmd = MSG_CMD_REGISTER;
-	msg->msglength = 0;
+	msg->msglength = 4;
 	RegisterPkg* reg = (RegisterPkg*)(registerPkg + sizeof(MsgPkg));
+	reg->port = peer_serverPort;
 
 	cout<<"please input the directory to register"<<endl;
 	cin >> dirname;
@@ -358,7 +362,11 @@ int Manager::SearchFile(string filename, string& ip, int& port)
 
 		SearchResponsePkg* sr = (SearchResponsePkg*)searchResult;
 		port = sr->port;
-		ip = sr->ip;
+		char* pip = new char[msg->msglength - 3];
+		bzero(pip, msg->msglength -3);
+		strncpy(pip, sr->ip, msg->msglength-4);
+		ip = pip;
+		delete [] pip;
 		delete [] searchResult;
 	}
 
@@ -368,6 +376,7 @@ int Manager::SearchFile(string filename, string& ip, int& port)
 
 int Manager::DownloadFile(string filename, string ip, int port)
 {
+	cout<<"begin to download"<<endl;
 	char downloadPkg[MAX_PKG_LEN] = {0};
 	MsgPkg* msg = (MsgPkg*)downloadPkg;
 	msg->msgcmd = MSG_CMD_DOWNLOAD;
@@ -407,7 +416,7 @@ int Manager::DownloadFile(string filename, string ip, int port)
 		return -1;
 	}
 	
-	if(msg->msglength <= 0)
+	if(msg->msglength < 0)
 	{
 		cout<<"peer server ip: "<<ip<<" port: "<<port<<" does not contain file: "<< filename<<endl;
 		return 0;
@@ -441,7 +450,8 @@ void* UserCmdProcess(void* arg)
 
 	if(mgr->Register() != 0)
 		cout<<"Register failed"<<endl;
-	cout<<"Register success"<<endl;
+	else
+		cout<<"Register success"<<endl;
 
 	while(1)
 	{
@@ -469,7 +479,7 @@ void* UserCmdProcess(void* arg)
 		char respond;
 		cin>>respond;
 
-		if(respond != 'y' || respond != 'Y')
+		if(respond != 'y' && respond != 'Y')
 			continue;
 
 		if(mgr->DownloadFile(filename, ip, port) != 0)

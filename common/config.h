@@ -74,6 +74,7 @@ struct SearchResponsePkg
 
 struct RegisterPkg
 {
+	int port;
 	char filename[1];
 };
 
