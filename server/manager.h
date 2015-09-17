@@ -5,7 +5,9 @@
 #include <queue>
 #include "thread.h"
 #include <vector>
+#include "model.h"
 #include "config.h"
+#include <string.h>
 
 using namespace std;
 
@@ -37,7 +39,7 @@ class Manager
 {
 	friend void* Process(void* arg);
 public:
-	Manager();
+	Manager(char* configfilename = "../config/server.config");
 	~Manager();
 
 	int Start();
@@ -52,6 +54,9 @@ private:
 	RequestQueue m_rq;
 	ResourceManager m_pResMan;
 	
+	string m_strServerIp;
+	int m_iServerPort;
+	int m_iServerThreadPoolNum;
 
 	Sem* m_semRequest;
 	Mutex* m_mtxRequest;

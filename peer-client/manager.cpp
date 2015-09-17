@@ -5,20 +5,38 @@
 #include <string>
 #include <cstdlib>
 #include "manager.h"
-#include "config.h"
 #include <dirent.h>
 #include <sys/epoll.h>
 #include "tools.h"
 #include <fstream>
+
 using namespace std;
 
-Manager::Manager()
+Manager::Manager(char* configfile)
 {
 	m_pSocket = NULL;
 	m_pClientSock = NULL;
 	m_semRequest = NULL;
 	m_mtxRequest = NULL;
 	m_pUserProcess = NULL;
+
+	Config* config = Config::Instance();
+	if( config->ParseConfig(configfile, "SYSTEM") != 0)
+	{
+		cout<<"parse config file:["<<configfile<<"] failed, exit"<<endl;
+		exit(-1);
+	}
+
+	string m_strServerIp = config->GetStrVal("SYSTEM", "serverip", "0.0.0.0");
+	int m_iServerPort = config->GetIntVal("SYSTEM", "serverport", 5550);
+
+	string m_strPeerIp = config->GetStrVal("SYSTEM", "peerip", "0.0.0.0");
+	int m_iPeerPort = config->GetIntVal("SYSTEM", "peerport", 5555);
+	int m_iPeerThreadPoolNum = config->GetIntVal("SYSTEM", "threadnum", 5);
+
+	string m_strPeerFileBufferDir = config->GetStrVal("SYSTEM", "filebufferdir", "./file/");
+
+	int m_iTestMode = config->GetIntVal("SYSTEM", "testmode", 0);
 }
 
 Manager::~Manager()
@@ -85,10 +103,10 @@ int Manager::Start()
 
 int Manager::Init()
 {
-	m_pSocket = new Socket(peer_serverIp.c_str(), peer_serverPort, ST_TCP);
+	m_pSocket = new Socket(m_strPeerIp.c_str(), m_iPeerPort, ST_TCP);
 	m_semRequest = new Sem(0, 0);
 	m_mtxRequest = new Mutex();
-	for(unsigned int i = 0; i < peer_serverThreadNumber; i++)
+	for(unsigned int i = 0; i < = m_iPeerThreadPoolNum; i++)
 	{
 		Thread* thread = new Thread(Process, this);
 		m_vecProcessThread.push_back(thread);
@@ -195,7 +213,7 @@ void* Process(void* arg)
 				DIR* dir = NULL;
 				struct dirent* direntry;
 
-				if((dir = opendir(fileBufferDir)) != NULL)
+				if((dir = opendir(m_strPeerFileBufferDir.c_str())) != NULL)
 				{
 					bool findDownloadFile = false;
 					while((direntry = readdir(dir)) != NULL)
@@ -210,8 +228,8 @@ void* Process(void* arg)
 					if(findDownloadFile)
 					{
 						char filepath [100] = {0};
-						strncpy(filepath, fileBufferDir, 99);
-						strncpy(filepath+strlen(fileBufferDir), downloadFilename.c_str(), 99 - strlen(fileBufferDir));
+						strncpy(filepath, m_strPeerFileBufferDir.c_str(), 99);
+						strncpy(filepath+strlen(m_strPeerFileBufferDir.c_str()), downloadFilename.c_str(), 99 - strlen(m_strPeerFileBufferDir.c_str()));
 						ifstream istream (filepath, std::ifstream::binary);
 						istream.seekg(0, istream.end);
 						int fileLen = istream.tellg();
@@ -443,20 +461,35 @@ int Manager::DownloadFile(string filename, string ip, int port)
 
 void* UserCmdProcess(void* arg)
 {
-	cout<<"Welcome to the peer client. download happy~~"<<endl;
+	cout<<"Welcome to the peer client. happy share~~"<<endl;
 	Manager* mgr = (Manager*)arg;
-	mgr->m_pClientSock = new Socket(serverIp.c_str(), serverPort, ST_TCP);
+	mgr->m_pClientSock = new Socket(m_strServerIp.c_str(), m_iServerPort, ST_TCP);
 	mgr->m_pClientSock->Create();
 
-	if(mgr->Register() != 0)
-		cout<<"Register failed"<<endl;
-	else
-		cout<<"Register success"<<endl;
+	while(1)
+	{	
+		if(mgr->Register() != 0)
+		{
+			cout<<"Register failed. Wanna try again please press y"<<endl;
+			char respond;
+			cin>>respond;
+			if(respond == 'y' || respond == 'Y')
+				continue
+			else
+				break;
+		}
+		else
+		{
+			cout<<"Register success"<<endl;
+			break;
+		}
+	}
+
 
 	while(1)
 	{
 		string filename = "";
-		cout<<"enter the file name you wanna download"<<endl;
+		cout<<"Please enter the file name you wanna download"<<endl;
 		cin>>filename;
 
 		string ip = "";
@@ -472,10 +505,10 @@ void* UserCmdProcess(void* arg)
 			cout<<"file :"<<filename<<" Not exist"<<endl;
 			continue;
 		}
-		cout<<"search file: "<<filename<< "success"<<endl;
-		cout<<"peer server :"<<ip <<" port :"<<port<<" has this file"<<endl;
+		cout<<"Search file: "<<filename<< "success"<<endl;
+		cout<<"Peer server :"<<ip <<" port :"<<port<<" has this file"<<endl;
 
-		cout<<"if you wanna to downlaod, press y"<<endl;
+		cout<<"If you wanna to downlaod, press y"<<endl;
 		char respond;
 		cin>>respond;
 

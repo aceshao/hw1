@@ -34,7 +34,7 @@ int Daemon(int maxfd, int coredump)
 	return 0;
 }
 
-int main()
+int main(int argc, char* argv[])
 {
 	if(Daemon(1024, 1) < 0)
 	{
@@ -42,7 +42,11 @@ int main()
 		return -1;
 	}
 
-	Manager manager;
+	if(argc == 2)
+		Manager manager(argv[1]);
+	else
+		Manager manager;
+	
 	manager.Start();
 	
 	while(1)

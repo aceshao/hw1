@@ -5,6 +5,8 @@
 #include <queue>
 #include "thread.h"
 #include <vector>
+#include "model.h"
+#include <string.h>
 #include "config.h"
 
 using namespace std;
@@ -21,7 +23,7 @@ class Manager
 	friend void* Process(void* arg);  // thread pool to handler all the file request
 	friend void* UserCmdProcess(void* arg); //single thread to handler user input
 public:
-	Manager();
+	Manager(char* configfile = "../config/client.config");
 	~Manager();
 
 	int Start();
@@ -41,7 +43,17 @@ private:
 	Socket* m_pClientSock;
 	Socket* m_pSocket;
 	RequestQueue m_rq;
-	
+
+	string m_strServerIp;
+	int m_iServerPort;
+
+	string m_strPeerIp;
+	int m_iPeerPort;
+	int m_iPeerThreadPoolNum;
+
+	string m_strPeerFileBufferDir;
+
+	int m_iTestMode; 
 
 	Sem* m_semRequest;
 	Mutex* m_mtxRequest;

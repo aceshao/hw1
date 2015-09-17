@@ -5,9 +5,8 @@
 #include <string>
 #include <cstdlib>
 #include "manager.h"
-#include "config.h"
-
 #include <sys/epoll.h>
+
 using namespace std;
 
 ResourceManager::ResourceManager()
@@ -98,9 +97,18 @@ int ResourceManager::UpdateAckTime(unsigned int time, string ip, int port)
 	return 0;
 }
 
-Manager::Manager()
+Manager::Manager(char * configfile)
 {
+	Config* config = Config::Instance();
+	if( config->ParseConfig(configfile, "SYSTEM") != 0)
+	{
+		cout<<"parse config file:["<<configfile<<"] failed, exit"<<endl;
+		exit(-1);
+	}
 
+	m_strServerIp = config->GetStrVal("SYSTEM", "serverip", "0.0.0.0");
+	m_iServerPort = config->GetIntVal("SYSTEM", "bindport", 5550);
+	m_iServerThreadPoolNum = config->GetIntVal("SYSTEM", "threadnum", 5);
 }
 
 Manager::~Manager()
@@ -131,7 +139,7 @@ Manager::~Manager()
 }
 
 int Manager::Start()
-{
+{	
 	int pid = fork();
 	if(pid == -1)
 	{
@@ -157,14 +165,15 @@ int Manager::Start()
 
 int Manager::Init()
 {
-	m_pSocket = new Socket(serverIp.c_str(), serverPort, ST_TCP);
+	m_pSocket = new Socket(m_strServerIp.c_str(), m_iServerPort, ST_TCP);
 	m_semRequest = new Sem(0, 0);
 	m_mtxRequest = new Mutex();
-	for(unsigned int i = 0; i < serverThreadNumber; i++)
+	for(unsigned int i = 0; i < m_iServerThreadPoolNum; i++)
 	{
 		Thread* thread = new Thread(Process, this);
 		m_vecProcessThread.push_back(thread);
 	}
+	cout<<"server has["<<m_iServerThreadPoolNum<<"] threads to handler client request"<<endl;
 	return 0;
 }
 
@@ -185,7 +194,7 @@ int Manager::Listen()
 		cout<<"socket listen failed"<<endl;
 		return -1;
 	}
-	cout<<"now begin listen"<<endl;
+	cout<<"server begin listen on ip["<< m_strServerIp<<"] port: ["<< m_iServerPort <<"]" <<endl;
 	return 0;
 }
 
