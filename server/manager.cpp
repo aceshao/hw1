@@ -48,8 +48,10 @@ int ResourceManager::LookUp(string filename, PeerInfo* pi)
 	{
 		for(unsigned int j = 0; j < m_vecPeerInfo[i]->files.size(); j++)
 		{
+			cout<<"server file: ["<<m_vecPeerInfo[i]->files[j]<<"]"<<endl;
 			if(m_vecPeerInfo[i]->files[j] == filename)
 			{
+				cout<<"found.....!!!!"<<endl;
 				pi = m_vecPeerInfo[i];
 				m_mtxResource->Unlock();
 				return 0;				
@@ -199,6 +201,7 @@ int Manager::Loop()
 	{
 		int nfds = epoll_wait(epfd, events, MAX_EPOLL_FD, -1);
 		if(nfds <= 0) continue;
+		cout<<"nfds: "<<nfds<<endl;
 		for (int i = 0; i < nfds; i++)
 		{
 			Socket* s = new Socket();
@@ -208,6 +211,7 @@ int Manager::Loop()
 				cout<<"socket accept failed"<<endl;
 				continue;
 			}
+			cout<<"new connection accepted"<<endl;
 			m_mtxRequest->Lock();
 			m_rq.push(s);
 			m_semRequest->Post();
@@ -215,6 +219,7 @@ int Manager::Loop()
 		}
 		usleep(100000);
 	}
+return 0;
 }
 
 void* Process(void* arg)
@@ -262,11 +267,16 @@ void* Process(void* arg)
 			case MSG_CMD_SEARCH:
 			{
 				string searchFilename = szData;
+				cout<<"begin to search file["<< searchFilename<<"]"<<endl;
 				PeerInfo* pi = NULL;
 				pmgr->m_pResMan.LookUp(searchFilename, pi);
+				cout<<"after lookup"<<endl;
 
+				if(! pi)
+					cout<<"not found on server"<<endl;
 				// peer node exist && status ok && ack time ok
-				if(! pi && pi->ps == ONLINE && time(NULL) - pi->ackTime < 30)
+				//if( pi && pi->ps == ONLINE && time(NULL) - pi->ackTime < 30)
+				if( pi && pi->ps == ONLINE )
 				{
 					// calculate the response packet lenght
 					int pkglen = sizeof(MsgPkg) + pi->ip.length() + 4;
@@ -312,6 +322,7 @@ void* Process(void* arg)
 					int filenameLen = atoi(filenames.substr(index, 4).c_str());
 					index += 4;
 					pi->files.push_back(filenames.substr(index, filenameLen));
+					cout<<"push_back filename: "<<filenames.substr(index, filenameLen)<<endl;
 					index += filenameLen;
 				}
 

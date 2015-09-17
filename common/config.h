@@ -20,12 +20,12 @@ const int MAX_PKG_LEN = 1000;
 const string peer_serverIp = "0.0.0.0";
 const int peer_serverPort = 5555;
 const int peer_serverThreadNumber = 5;
-char fileBufferDir[] = "./file/";
+const char fileBufferDir[] = "./file/";
 //end
 
 // those below are for common use
 const int MAX_EPOLL_FD = 30;
-const int MSG_HEAD_LEN = sizeof(MsgPkg);
+const int MSG_HEAD_LEN = 8;
 
 enum SocketType
 {
@@ -85,7 +85,7 @@ struct DownloadPkg
 struct MsgPkg
 {
 	MsgCmd msgcmd;
-	unsigned int msglength;
+	int msglength;
 };
 #pragma pack ()
 

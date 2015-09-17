@@ -9,7 +9,6 @@
 #include <dirent.h>
 #include <sys/epoll.h>
 #include "tools.h"
-#include <ofstream>
 #include <fstream>
 using namespace std;
 
@@ -149,6 +148,7 @@ int Manager::Loop()
 		}
 		usleep(100000);
 	}
+return 0;
 }
 
 void* Process(void* arg)
@@ -271,15 +271,26 @@ int Manager::Register()
 		delete [] registerPkg;
 		return -1;
 	}
+	int offset = 0;
+	int count = 0;
 	while((direntry = readdir(dir)) != NULL)
 	{
-		strncpy(reg, iTo4ByteString(direntry->d_reclen).c_str(), 4);
-		reg += 4;
-		strncpy(reg, direntry->d_name, direntry->d_reclen);
-		reg += direntry->d_reclen;
-		msg->msglength += 4
-		msg->msglength += direntry->d_reclen;
+		if(direntry -> d_type != DT_REG)
+			continue;
+		string nametemp = direntry->d_name;
+		//strncpy(reg->filename + offset, iTo4ByteString(direntry->d_reclen).c_str(), 4);
+		strncpy(reg->filename + offset, iTo4ByteString(nametemp.length()).c_str(), 4);
+		offset += 4;
+		strncpy(reg->filename + offset, direntry->d_name, nametemp.length());
+		offset += nametemp.length();
+		msg->msglength += 4;
+		msg->msglength += nametemp.length();
+		cout<<"filename: " << direntry->d_name<<endl;
+		cout<<"filesize: " <<nametemp.length()<<endl;
+		count++;
 	}
+	cout<<"register file number:" <<count<<endl;
+	cout<<"register file length:" <<msg->msglength<<endl;
 
 	if( m_pClientSock->Connect() != 0)
 	{
@@ -290,8 +301,6 @@ int Manager::Register()
 
 	m_pClientSock->Send(registerPkg, sizeof(MsgPkg) + msg->msglength);
 	m_pClientSock->Close();
-	delete m_pClientSock;
-	m_pClientSock = NULL;
 	delete [] registerPkg;
 	return 0;
 }
@@ -302,7 +311,9 @@ int Manager::SearchFile(string filename, string& ip, int& port)
 	MsgPkg* msg = (MsgPkg*)searchPkg;
 	msg->msgcmd = MSG_CMD_SEARCH;
 	msg->msglength = filename.length();
-	strncpy(msg+sizeof(MsgPkg), filename.c_str(), filename.length());
+	strncpy((char*)msg+sizeof(MsgPkg), filename.c_str(), filename.length());
+	
+	m_pClientSock->Create();
 
 	if(m_pClientSock->Connect() != 0)
 	{
@@ -337,7 +348,7 @@ int Manager::SearchFile(string filename, string& ip, int& port)
 	else
 	{
 		char* searchResult = new char[msg->msglength];
-		if(m_pClientSock->Recv(searchResult, msg->msglength) ! msg->msglength)
+		if(m_pClientSock->Recv(searchResult, msg->msglength) != msg->msglength)
 		{
 			cout<<"search file recv from index server failed"<<endl;
 			m_pClientSock->Close();
@@ -348,10 +359,10 @@ int Manager::SearchFile(string filename, string& ip, int& port)
 		SearchResponsePkg* sr = (SearchResponsePkg*)searchResult;
 		port = sr->port;
 		ip = sr->ip;
+		delete [] searchResult;
 	}
 
 	m_pClientSock->Close();
-	delete [] searchResult;
 	return 0;
 }
 
@@ -375,7 +386,7 @@ int Manager::DownloadFile(string filename, string ip, int port)
 		cout<<"download socket connect failed"<<endl;
 		return -1;
 	}
-	if(downloadSocket.Send(downloadPkg, msg->msglength + sizeof(MsgPkg)) != msg->msglength + sizeof(MsgPkg))
+	if(downloadSocket.Send(downloadPkg, msg->msglength + sizeof(MsgPkg)) != msg->msglength + MSG_HEAD_LEN)
 	{
 		cout<<"download socket send failed"<<endl;
 		downloadSocket.Close();
@@ -425,6 +436,7 @@ void* UserCmdProcess(void* arg)
 {
 	cout<<"Welcome to the peer client. download happy~~"<<endl;
 	Manager* mgr = (Manager*)arg;
+	mgr->m_pClientSock = new Socket(serverIp.c_str(), serverPort, ST_TCP);
 	mgr->m_pClientSock->Create();
 
 	if(mgr->Register() != 0)
@@ -433,7 +445,7 @@ void* UserCmdProcess(void* arg)
 
 	while(1)
 	{
-		stirng filename = "";
+		string filename = "";
 		cout<<"enter the file name you wanna download"<<endl;
 		cin>>filename;
 
