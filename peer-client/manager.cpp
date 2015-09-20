@@ -12,7 +12,7 @@
 
 using namespace std;
 
-Manager::Manager(char* configfile)
+Manager::Manager(string configfile)
 {
 	m_pSocket = NULL;
 	m_pClientSock = NULL;
@@ -21,22 +21,22 @@ Manager::Manager(char* configfile)
 	m_pUserProcess = NULL;
 
 	Config* config = Config::Instance();
-	if( config->ParseConfig(configfile, "SYSTEM") != 0)
+	if( config->ParseConfig(configfile.c_str(), "SYSTEM") != 0)
 	{
 		cout<<"parse config file:["<<configfile<<"] failed, exit"<<endl;
 		exit(-1);
 	}
 
-	string m_strServerIp = config->GetStrVal("SYSTEM", "serverip", "0.0.0.0");
-	int m_iServerPort = config->GetIntVal("SYSTEM", "serverport", 5550);
+	m_strServerIp = config->GetStrVal("SYSTEM", "serverip", "0.0.0.0");
+	m_iServerPort = config->GetIntVal("SYSTEM", "serverport", 5550);
 
-	string m_strPeerIp = config->GetStrVal("SYSTEM", "peerip", "0.0.0.0");
-	int m_iPeerPort = config->GetIntVal("SYSTEM", "peerport", 5555);
-	int m_iPeerThreadPoolNum = config->GetIntVal("SYSTEM", "threadnum", 5);
+	m_strPeerIp = config->GetStrVal("SYSTEM", "peerip", "0.0.0.0");
+	m_iPeerPort = config->GetIntVal("SYSTEM", "peerport", 5555);
+	m_iPeerThreadPoolNum = config->GetIntVal("SYSTEM", "threadnum", 5);
 
-	string m_strPeerFileBufferDir = config->GetStrVal("SYSTEM", "filebufferdir", "./file/");
+	m_strPeerFileBufferDir = config->GetStrVal("SYSTEM", "filebufferdir", "./file/");
 
-	int m_iTestMode = config->GetIntVal("SYSTEM", "testmode", 0);
+	m_iTestMode = config->GetIntVal("SYSTEM", "testmode", 0);
 }
 
 Manager::~Manager()
@@ -106,7 +106,7 @@ int Manager::Init()
 	m_pSocket = new Socket(m_strPeerIp.c_str(), m_iPeerPort, ST_TCP);
 	m_semRequest = new Sem(0, 0);
 	m_mtxRequest = new Mutex();
-	for(unsigned int i = 0; i < = m_iPeerThreadPoolNum; i++)
+	for(int i = 0; i <= m_iPeerThreadPoolNum; i++)
 	{
 		Thread* thread = new Thread(Process, this);
 		m_vecProcessThread.push_back(thread);
@@ -124,6 +124,8 @@ int Manager::Listen()
 		cout<<"socket create failed"<<endl;
 		return -1;
 	}
+	if(m_pSocket->SetSockAddressReuse(true) < 0)
+		cout<<"set socket address reuse failed"<<endl;
 	if(m_pSocket->Bind() < 0)
 	{
 		cout<<"socket bind failed"<<endl;
@@ -213,7 +215,7 @@ void* Process(void* arg)
 				DIR* dir = NULL;
 				struct dirent* direntry;
 
-				if((dir = opendir(m_strPeerFileBufferDir.c_str())) != NULL)
+				if((dir = opendir(pmgr->m_strPeerFileBufferDir.c_str())) != NULL)
 				{
 					bool findDownloadFile = false;
 					while((direntry = readdir(dir)) != NULL)
@@ -228,8 +230,8 @@ void* Process(void* arg)
 					if(findDownloadFile)
 					{
 						char filepath [100] = {0};
-						strncpy(filepath, m_strPeerFileBufferDir.c_str(), 99);
-						strncpy(filepath+strlen(m_strPeerFileBufferDir.c_str()), downloadFilename.c_str(), 99 - strlen(m_strPeerFileBufferDir.c_str()));
+						strncpy(filepath, pmgr->m_strPeerFileBufferDir.c_str(), 99);
+						strncpy(filepath+strlen(pmgr->m_strPeerFileBufferDir.c_str()), downloadFilename.c_str(), 99 - strlen(pmgr->m_strPeerFileBufferDir.c_str()));
 						ifstream istream (filepath, std::ifstream::binary);
 						istream.seekg(0, istream.end);
 						int fileLen = istream.tellg();
@@ -283,13 +285,13 @@ int Manager::Register()
 	msg->msgcmd = MSG_CMD_REGISTER;
 	msg->msglength = 4;
 	RegisterPkg* reg = (RegisterPkg*)(registerPkg + sizeof(MsgPkg));
-	reg->port = peer_serverPort;
+	reg->port = m_iPeerPort;
 
 	cout<<"please input the directory to register"<<endl;
 	cin >> dirname;
 	if((dir = opendir(dirname.c_str())) == NULL)
 	{
-		cout<<"can not open this directory: "<<dirname<<endl;
+		cout<<"Sorry! can not open this directory: "<<dirname<<endl;
 		delete [] registerPkg;
 		return -1;
 	}
@@ -463,7 +465,8 @@ void* UserCmdProcess(void* arg)
 {
 	cout<<"Welcome to the peer client. happy share~~"<<endl;
 	Manager* mgr = (Manager*)arg;
-	mgr->m_pClientSock = new Socket(m_strServerIp.c_str(), m_iServerPort, ST_TCP);
+	mgr->m_pClientSock = new Socket(mgr->m_strServerIp.c_str(), mgr->m_iServerPort, ST_TCP);
+	cout<<"wanna to connect server["<<mgr->m_strServerIp<<"] and port: ["<<mgr->m_iServerPort<<"]"<<endl;
 	mgr->m_pClientSock->Create();
 
 	while(1)
@@ -474,7 +477,7 @@ void* UserCmdProcess(void* arg)
 			char respond;
 			cin>>respond;
 			if(respond == 'y' || respond == 'Y')
-				continue
+				continue;
 			else
 				break;
 		}

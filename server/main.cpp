@@ -43,11 +43,15 @@ int main(int argc, char* argv[])
 	}
 
 	if(argc == 2)
+	{
 		Manager manager(argv[1]);
+		manager.Start();
+	}
 	else
+	{
 		Manager manager;
-	
-	manager.Start();
+		manager.Start();
+	}
 	
 	while(1)
 	{

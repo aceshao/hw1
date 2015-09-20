@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include "manager.h"
 #include <sys/epoll.h>
+#include "config.h"
 
 using namespace std;
 
@@ -97,10 +98,13 @@ int ResourceManager::UpdateAckTime(unsigned int time, string ip, int port)
 	return 0;
 }
 
-Manager::Manager(char * configfile)
+Manager::Manager(string  configfile)
 {
+	m_pSocket = NULL;
+	m_mtxRequest = NULL;	
+	m_semRequest = NULL;
 	Config* config = Config::Instance();
-	if( config->ParseConfig(configfile, "SYSTEM") != 0)
+	if( config->ParseConfig(configfile.c_str(), "SYSTEM") != 0)
 	{
 		cout<<"parse config file:["<<configfile<<"] failed, exit"<<endl;
 		exit(-1);
@@ -118,11 +122,11 @@ Manager::~Manager()
 		delete m_pSocket;
 		m_pSocket = NULL;
 	}
-	if(m_semRequest)
-	{
-		delete m_semRequest;
-		m_semRequest = NULL;
-	}
+	//if(m_semRequest)
+	//{
+	//	delete m_semRequest;
+	//	m_semRequest = NULL;
+	//}
 	if(m_mtxRequest)
 	{
 		delete m_mtxRequest;
@@ -168,7 +172,7 @@ int Manager::Init()
 	m_pSocket = new Socket(m_strServerIp.c_str(), m_iServerPort, ST_TCP);
 	m_semRequest = new Sem(0, 0);
 	m_mtxRequest = new Mutex();
-	for(unsigned int i = 0; i < m_iServerThreadPoolNum; i++)
+	for(int i = 0; i < m_iServerThreadPoolNum; i++)
 	{
 		Thread* thread = new Thread(Process, this);
 		m_vecProcessThread.push_back(thread);
@@ -179,14 +183,19 @@ int Manager::Init()
 
 int Manager::Listen()
 {
+	int ret = 0;
 	if (m_pSocket->Create() < 0)
 	{
 		cout<<"socket create failed"<<endl;
 		return -1;
 	}
-	if(m_pSocket->Bind() < 0)
+	if(m_pSocket->SetSockAddressReuse(true) < 0)
 	{
-		cout<<"socket bind failed"<<endl;
+		cout<<"set socket address reuse failed"<<endl;
+	}
+	if((ret = m_pSocket->Bind()) < 0)
+	{
+		cout<<"socket bind failed, errno["<<errno<<"]"<<endl;
 		return -1;
 	}
 	if(m_pSocket->Listen() < 0)

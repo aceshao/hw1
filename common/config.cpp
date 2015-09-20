@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <sys/mman.h>
 #include <sys/time.h>
-#include <memutil.h>
 #include "config.h"
 
 int str2int (const char *strval, int def)
@@ -87,7 +86,7 @@ int Config::ParseConfig (const char *fn, const char *defsec)
 	}
 	len = lseek (fd, 0L, SEEK_END);
 	lseek (fd, 0L, SEEK_SET);
-	buf = (char *)MALLOC(len+1);
+	buf = new char[len+1];
 	read(fd, buf, len);
 	buf[len] = '\0';
 	ret_code = len + 1;
@@ -217,7 +216,7 @@ int Config::ParseConfig (const char *fn, const char *defsec)
 
 		(*m)[key] = val;
 	}
-	FREE(buf);
+	delete [] buf;
 	return ret_code;
 }
 

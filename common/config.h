@@ -3,10 +3,10 @@
 
 #include <stdio.h>
 #include <string>
+#include <strings.h>
 #include <map>
 
 using namespace std;
-
 class Config 
 {
 public:
@@ -31,6 +31,7 @@ private:
 	secmap smap;
 	static Config* config;
 };
+
 
 #endif
 

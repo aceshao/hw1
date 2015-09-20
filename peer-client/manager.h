@@ -23,7 +23,7 @@ class Manager
 	friend void* Process(void* arg);  // thread pool to handler all the file request
 	friend void* UserCmdProcess(void* arg); //single thread to handler user input
 public:
-	Manager(char* configfile = "../config/client.config");
+	Manager(string configfile = "../config/client.config");
 	~Manager();
 
 	int Start();

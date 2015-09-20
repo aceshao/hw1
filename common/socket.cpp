@@ -124,3 +124,18 @@ int Socket::GetPort()
     GetPeerName((struct sockaddr*) &clientaddr, &len);
     return ntohs(clientaddr.sin_port);;
 }
+
+int Socket:: SetSockOpt(int level, int optname, const void *optval, socklen_t optlen)
+{
+	return setsockopt(m_iSocket, level, optname, optval, optlen);
+}
+
+int Socket::SetSockAddressReuse(bool reuse)
+{
+	int optval = 0;
+	if(reuse)
+	{
+		optval = 1;
+	}
+	return SetSockOpt(SOL_SOCKET, SO_REUSEADDR, &optval, sizeof optval);	
+}

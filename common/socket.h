@@ -2,11 +2,17 @@
 #ifndef SOCKET_H
 #define SOCKET_H
 
-#include "config.h"
 #include <sys/socket.h>
 #include <string>
 
 using namespace std;
+
+enum SocketType
+{
+    ST_TCP = 1,
+    ST_UDP
+};
+
 
 class Socket
 {
@@ -30,6 +36,8 @@ class Socket
         void SetSocket(int sockId){m_iSocket = sockId;}
         int GetSocket(){return m_iSocket;}
         int GetPeerName(struct sockaddr *name, socklen_t *namelen);
+	int SetSockOpt(int level, int optname, const void *optval, socklen_t optlen);
+	int SetSockAddressReuse(bool reuse = true);
 
         string GetIp();
         int GetPort();

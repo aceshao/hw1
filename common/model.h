@@ -1,5 +1,5 @@
-#ifndef CONFIG_H
-#define CONFIG_H
+#ifndef MODEL_H
+#define MODEL_H
 
 #include <string>
 #include <vector>
@@ -13,12 +13,6 @@ const int MAX_PKG_LEN = 1000;
 // those below are for common use
 const int MAX_EPOLL_FD = 30;
 const int MSG_HEAD_LEN = 8;
-
-enum SocketType
-{
-    ST_TCP = 1,
-    ST_UDP
-};
 
 enum MsgCmd
 {
