@@ -309,12 +309,11 @@ int Manager::Register()
 		offset += nametemp.length();
 		msg->msglength += 4;
 		msg->msglength += nametemp.length();
-		cout<<"filename: " << direntry->d_name<<endl;
-		cout<<"filesize: " <<nametemp.length()<<endl;
+		//cout<<"filename: " << direntry->d_name<<endl;
+		//cout<<"filesize: " <<nametemp.length()<<endl;
 		count++;
 	}
-	cout<<"register file number:" <<count<<endl;
-	cout<<"register file length:" <<msg->msglength<<endl;
+	//cout<<"register file length:" <<msg->msglength<<endl;
 
 	if( m_pClientSock->Connect() != 0)
 	{
@@ -324,13 +323,32 @@ int Manager::Register()
 	}
 
 	m_pClientSock->Send(registerPkg, sizeof(MsgPkg) + msg->msglength);
+
+	char* szBack = new char[sizeof(MsgPkg)];
+	m_pClientSock->Recv(szBack, sizeof(MsgPkg));
+	MsgPkg* msg = (MsgPkg*)szBack;
+	int iRet = 0;
+	if(msg->msgcmd == MSG_CMD_REGISTER && msg->msglength == 0)
+	{
+		out<<"Register Success. register total file number:" <<count<<endl;
+		iRet = 0;		
+	}
+	else
+	{
+		cout<<"Register Failed"<<endl;
+		iRet = -1;
+	}
 	m_pClientSock->Close();
 	delete [] registerPkg;
-	return 0;
+	delete [] szBack;
+
+	return iRet;
 }
 
 int Manager::SearchFile(string filename, string& ip, int& port)
 {
+	m_vecIp.clear();
+	m_vecPort.clear();
 	char* searchPkg = new char[MAX_PKG_LEN];
 	MsgPkg* msg = (MsgPkg*)searchPkg;
 	msg->msgcmd = MSG_CMD_SEARCH;
@@ -366,12 +384,12 @@ int Manager::SearchFile(string filename, string& ip, int& port)
 	}
 	if(msg->msglength == 0)
 	{
-		port = 0;
-		ip = "";
+		// do nothing
 	}
 	else
 	{
-		char* searchResult = new char[msg->msglength];
+		char* searchResult = new char[msg->msglength] + 1;
+		bzero(searchResult, msg->msglength + 1);
 		if(m_pClientSock->Recv(searchResult, msg->msglength) != msg->msglength)
 		{
 			cout<<"search file recv from index server failed"<<endl;
@@ -380,13 +398,24 @@ int Manager::SearchFile(string filename, string& ip, int& port)
 			return -1;
 		}
 
-		SearchResponsePkg* sr = (SearchResponsePkg*)searchResult;
-		port = sr->port;
-		char* pip = new char[msg->msglength - 3];
-		bzero(pip, msg->msglength -3);
-		strncpy(pip, sr->ip, msg->msglength-4);
-		ip = pip;
-		delete [] pip;
+		string files = searchResult;
+		cout<<"Get the search result: ["<<files<<"]"<<endl;
+		char* temp = NULL;
+		bool isIp = true;
+		for(temp = strtok(files.c_str(), SPLIT_CHARACTER); temp; temp = strtok(NULL, SPLIT_CHARACTER))
+		{
+			if(isIp)
+			{
+				m_vecIp.push_back(temp);
+				isIp = false;
+			}
+			else
+			{
+				m_vecPort.push_back(atoi(temp));
+				isIp = true;
+			}
+
+		}
 		delete [] searchResult;
 	}
 

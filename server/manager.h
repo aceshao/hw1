@@ -20,6 +20,7 @@ public:
 
 	int Insert(PeerInfo* pi);
 	int LookUp(string filename, PeerInfo** pi);
+	int LookUp(string filename, vector<PeerInfo*>& vecpi);
 	int Update(PeerInfo* pi);
 	int UpdateAckTime(unsigned int time, string ip, int port );
 

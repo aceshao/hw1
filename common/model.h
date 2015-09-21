@@ -7,12 +7,14 @@ using namespace std;
 
 
 // those below are for peer - client
-const int MAX_PKG_LEN = 1000;
+const int MAX_PKG_LEN = 100000;
 
 
 // those below are for common use
 const int MAX_EPOLL_FD = 30;
 const int MSG_HEAD_LEN = 8;
+
+const char SPLIT_CHARACTER = '&';
 
 enum MsgCmd
 {

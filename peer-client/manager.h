@@ -34,7 +34,7 @@ protected:
 	int Loop();
 
 	int Register();
-	int SearchFile(string filename, string& ip, int& port);
+	int SearchFile(string filename);
 	int DownloadFile(string filename, string ip, int port);
 
 	int SendFile();
@@ -54,6 +54,9 @@ private:
 	string m_strPeerFileBufferDir;
 
 	int m_iTestMode; 
+
+	vector<string> m_vecIp;
+	vector<int> m_vecPort;
 
 	Sem* m_semRequest;
 	Mutex* m_mtxRequest;

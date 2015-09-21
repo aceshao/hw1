@@ -62,6 +62,25 @@ int ResourceManager::LookUp(string filename, PeerInfo** pi)
 	return 0;
 }
 
+int ResourceManager::LookUp(string filename, vector<PeerInfo*>& vecpi)
+{
+	m_mtxResource->Lock();
+	for(unsigned int i = 0; i < m_vecPeerInfo.size(); i++)
+	{
+		for(unsigned int j = 0; j < m_vecPeerInfo[i]->files.size(); j++)
+		{
+			if(m_vecPeerInfo[i]->files[j] == filename)
+			{
+				vecpi.push_back(m_vecPeerInfo[j]);
+				break;
+			}
+		}
+	}
+
+	m_mtxResource->Unlock();
+	return 0;
+}
+
 int ResourceManager::Update(PeerInfo* pi)
 {
 	m_mtxResource->Lock();
@@ -285,33 +304,16 @@ void* Process(void* arg)
 			case MSG_CMD_SEARCH:
 			{
 				string searchFilename = szData;
-				cout<<"begin to search file["<< searchFilename<<"]"<<endl;
-				PeerInfo* pi = NULL;
-				pmgr->m_pResMan.LookUp(searchFilename, &pi);
-				cout<<"after lookup"<<endl;
+				cout<<"Begin to search file["<< searchFilename<<"]"<<endl;
+				//PeerInfo* pi = NULL;
+				//pmgr->m_pResMan.LookUp(searchFilename, &pi);
 
-				if(! pi)
-					cout<<"not found on server"<<endl;
-				// peer node exist && status ok && ack time ok
-				//if( pi && pi->ps == ONLINE && time(NULL) - pi->ackTime < 30)
-				if( pi && pi->ps == ONLINE )
+				vector<PeerInfo*> vecpi;
+				pmgr->m_pResMan.LookUp(searchFilename, vecpi)
+
+				if(vecpi.size() == 0)
 				{
-					// calculate the response packet lenght
-					int pkglen = sizeof(MsgPkg) + pi->ip.length() + 4;
-					char* szBack = new char[pkglen];
-					MsgPkg* msg = (MsgPkg*)szBack;
-					msg->msgcmd = MSG_CMD_SEARCH_RESPONSE;
-					msg->msglength = pi->ip.length() + 4;
-					SearchResponsePkg* resp = (SearchResponsePkg*)(szBack + sizeof(MsgPkg));
-					resp->port = pi->port;
-					strncpy(resp->ip, pi->ip.c_str(), pi->ip.length());
-					client->Send(szBack, pkglen);
-					delete [] szBack;
-					client->Close();
-					break;
-				}
-				else
-				{
+					cout<<"File not found on any peer server"<<endl;
 					int pkglen = sizeof(MsgPkg);
 					char* szBack = new char[pkglen];
 					MsgPkg* msg = (MsgPkg*)szBack;
@@ -322,6 +324,29 @@ void* Process(void* arg)
 					client->Close();
 					break;
 				}
+
+				char* szBack = new char[MAX_PKG_LEN];
+				// peer node exist && status ok && ack time ok
+				for(unsigned int i = 0; i < vecpi.size(); i++)
+				{
+					MsgPkg* msg = (MsgPkg*)szBack;
+					msg->msgcmd = MSG_CMD_SEARCH_RESPONSE;
+					msg->msglength = 0;
+					if( vecpi[i] && vecpi[i]->ps == ONLINE )
+					{
+						// each ip port pair length consists of: port [4] length of ip [4] and ip length[x]
+						strncpy(szBack + sizeof(MsgPkg) +  msg->msglength, iTo4ByteString(vecpi[i]->port).c_str(), MAX_PKG_LEN - msg->msglength);
+						msg->msglength += 4; // FOR THE PORT
+						strncpy(szBack + sizeof(MsgPkg) +  msg->msglength, SPLIT_CHARACTER, MAX_PKG_LEN - msg->msglength);
+						msg->msglength += 1; // FOR SPLIT CHARACTER
+						strncpy(szBack + sizeof(MsgPkg) +  msg->msglength, vecpi[i]->ip.c_str(), MAX_PKG_LEN - msg->msglength);
+						msg->msglength += vecpi[i]->ip.length(); // FOR IP LENGTH
+					}
+				}
+				client->Send(szBack, pkglen);
+				delete [] szBack;
+				client->Close();
+				break;
 			}
 			case MSG_CMD_REGISTER:
 			{
@@ -346,6 +371,13 @@ void* Process(void* arg)
 				}
 
 				pmgr->m_pResMan.Update(pi);
+
+				char* szBack = new char[sizeof(MsgPkg)];
+				MsgPkg* msg = (MsgPkg*)szBack;
+				msg->msgcmd = MSG_CMD_REGISTER;
+				msg->msglength = 0; // which stands for register success
+				client->Send(szBack, sizeof(MsgPkg));
+				delete [] szBack;
 				client->Close();
 				break;
 			}
