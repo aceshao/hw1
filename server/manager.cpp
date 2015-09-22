@@ -341,14 +341,14 @@ void* Process(void* arg)
 						msg->msglength += 4; // FOR THE PORT
 						strncpy(Back + sizeof(MsgPkg) +  msg->msglength, &SPLIT_CHARACTER, 1);
 						msg->msglength += 1; // FOR SPLIT CHARACTER
-						strncpy(Back + sizeof(MsgPkg) +  msg->msglength, vecpi[i]->ip.c_str(), MAX_PKG_LEN - msg->msglength);
+						strncpy(Back + sizeof(MsgPkg) +  msg->msglength, vecpi[i]->ip.c_str(), MAX_PKG_LEN - msg->msglength - sizeof(MsgPkg));
 						msg->msglength += vecpi[i]->ip.length(); // FOR IP LENGTH
 					}
 				}
 				cout<<"length "<<msg->msglength<<endl;
 				client->Send(Back, msg->msglength + sizeof(MsgPkg));
 				client->Close();
-				//delete [] Back;
+				delete [] Back;
 				break;
 			}
 			case MSG_CMD_REGISTER:
