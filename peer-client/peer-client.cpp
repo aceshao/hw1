@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
 		while(1)
 		{
 	           sleep(2);
-	           if(manager->IsStoped())
+	           if(manager.IsStoped())
 	           {
 	           		printf("Restarted!!!!");
 	           		manager.Start();
@@ -65,7 +65,7 @@ int main(int argc, char* argv[])
 		while(1)
 		{
 	           sleep(2);
-	           if(manager->IsStoped())
+	           if(manager.IsStoped())
 	           {
 	           		printf("Restarted!!!!");
 	           		manager.Start();

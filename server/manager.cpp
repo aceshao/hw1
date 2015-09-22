@@ -194,14 +194,14 @@ int Manager::Start()
 
 int  Manager::IsStoped()
 {
-	int result = ::kill(m_iPID, 0);
+	int result = ::kill(m_iPid, 0);
 	if (0 == result || errno != ESRCH)
 	{
 		return false;
 	}
 	else	
 	{
-		m_iPID=0;
+		m_iPid = 0;
 		return true;
 	}
 }
