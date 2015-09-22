@@ -16,6 +16,8 @@ const int MSG_HEAD_LEN = 8;
 
 const char SPLIT_CHARACTER = '&';
 
+const char SPLIT_FILE = ' ';
+
 enum MsgCmd
 {
 	MSG_CMD_ACK,
@@ -24,6 +26,13 @@ enum MsgCmd
 	MSG_CMD_REGISTER,
 	MSG_CMD_DOWNLOAD,
 	MSG_CMD_DOWNLOAD_RESPONSE
+};
+
+struct FilePeer
+{
+	string filename;
+	string ip;
+	int port;
 };
 
 enum PeerStatus

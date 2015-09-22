@@ -38,6 +38,8 @@ Manager::Manager(string configfile)
 
 	m_strPeerFileBufferDir = config->GetStrVal("SYSTEM", "filebufferdir", "./file/");
 
+	m_strPeerFileDownloadDir = config->GetStrVal("SYSTEM", "downloaddir", "./download/");
+
 	m_iTestMode = config->GetIntVal("SYSTEM", "testmode", 0);
 }
 
@@ -354,7 +356,7 @@ int Manager::Register_TEST()
 	struct dirent* direntry;
 
 
-	cout<<"please input the directory to register"<<endl;
+	cout<<"Please input the directory to register"<<endl;
 	cin >> dirname;
 	if((dir = opendir(dirname.c_str())) == NULL)
 	{
@@ -414,21 +416,60 @@ int Manager::Register_TEST()
 		delete [] szBack;
 	}
 
-	
-
-	
-
 	struct timeval end;
 	gettimeofday(&end, NULL);
-	int timeelaspe = 1000000*end.tv_sec + end.tv_usec - begin.tv_usec - 1000000*begin.tv_sec;
+	unsigned int timeelaspe = 1000000*end.tv_sec + end.tv_usec - begin.tv_usec - 1000000*begin.tv_sec;
 	cout<<"Register total file:["<<count<<"] and cost: ["<< timeelaspe <<"] us"<<endl;
 	if(count > 0)
 		cout<<"Average time: [" << timeelaspe/count <<"]us"<<endl;
 	return 0;
 }
 
+int Manager::SearchFile_TEST()
+{
+	cout<<"Please input the search file full path name"<<endl;
+	string searchFile = "";
+	cin>>searchFile;
 
-int Manager::SearchFile(string filename)
+	ifstream in;
+	in.open(searchFile.c_str(), ios::in);
+	in.seekg(0, in.end);
+	int fileLen = in.tellg();
+	in.seekg(0, in.beg);
+
+	char* buffer = new char[fileLen + 1];
+	bzero(buffer, fileLen + 1);
+
+	in.read(buffer, fileLen);
+	char* file = NULL;
+	for(file = strtok(buffer, &SPLIT_FILE); file; file = strtok(NULL, &SPLIT_FILE))
+	{
+		FilePeer fp;
+		fp.filename = file;
+		fp.ip = "";
+		fp.port = 0;
+		m_vecTestFilePeer.push_back(fp);
+	}
+
+	struct timeval begin;
+	gettimeofday(&begin);
+	for(unsigned int i = 0; i < m_vecTestFilePeer.size(); i++)
+	{
+		searchFile(m_vecTestFilePeer[i].filename, &m_vecTestFilePeer[i].ip, &m_vecTestFilePeer[i].port);
+	}
+
+	struct timeval end;
+	gettimeofday(&end);
+	unsigned int timeelaspe = 1000000*end.tv_sec + end.tv_usec - begin.tv_usec - 1000000*begin.tv_sec;
+
+	cout<<"Search total file: ["<<m_vecTestFilePeer.size()<<"]and cost: ["<< timeelaspe <<"] us"<<endl;
+	if(m_vecTestFilePeer.size() > 0)
+	cout<<"Average time: [" << timeelaspe/m_vecTestFilePeer.size() <<"]us"<<endl;
+
+	return 0;
+}
+
+int Manager::SearchFile(string filename, string* ip, int* port)
 {
 	m_vecIp.clear();
 	m_vecPort.clear();
@@ -500,11 +541,37 @@ int Manager::SearchFile(string filename)
 			}
 
 		}
+		*ip = m_vecIp[0];
+		*port = m_vecPort[0];
 		delete [] searchResult;
 	}
 
 	m_pClientSock->Close();
 	return 0;
+}
+
+int Manager::DownloadFile_TEST()
+{
+	int count = 0;
+	struct timeval begin;
+	gettimeofday(&begin);
+	for(unsigned int i = 0; i < m_vecTestFilePeer.size(); i++)
+	{
+		if(m_vecTestFilePeer[i].ip != "" && m_vecTestFilePeer[i].port != 0)
+		{
+			DownloadFile(m_vecTestFilePeer[i].filename, m_vecTestFilePeer[i].ip, m_vecTestFilePeer[i].port);
+			count++;
+		}
+	}
+
+	struct timeval end;
+	gettimeofday(&end);
+
+	unsigned int timeelaspe = 1000000*end.tv_sec + end.tv_usec - begin.tv_usec - 1000000*begin.tv_sec;
+
+	cout<<"Download total file: ["<<count<<"]and cost: ["<< timeelaspe <<"] us"<<endl;
+	if(count > 0)
+	cout<<"Average time: [" << timeelaspe/count <<"]us"<<endl;
 }
 
 int Manager::DownloadFile(string filename, string ip, int port)
@@ -566,7 +633,8 @@ int Manager::DownloadFile(string filename, string ip, int port)
 		}
 
 		ofstream out;
-		out.open(filename.c_str(), ios::out|ios::binary);
+		filefullpath = m_strPeerFileDownloadDir + filename;
+		out.open(filefullpath.c_str(), ios::out|ios::binary);
 		out.write(file, msg->msglength);
 		out.close();
 		delete [] file;
@@ -587,8 +655,11 @@ void* UserCmdProcess(void* arg)
 		cout<<"This is in TEST MODE"<<endl;
 
 		// calculate the average time for registeration
+		cout<<"BEGIN to register test"<<endl;
 		mgr->Register_TEST();
 
+		cout<<"BEGIN to search file test"<<endl;
+		mgr->SearchFile_TEST();
 		return 0;
 	}
 

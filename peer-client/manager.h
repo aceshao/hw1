@@ -34,9 +34,12 @@ protected:
 	int Loop();
 
 	int Register();
-	int Register_TEST();
 
-	int SearchFile(string filename);
+	int Register_TEST();
+	int SearchFile_TEST();
+	int DownloadFile_TEST();
+
+	int SearchFile(string filename, string* ip = NULL, int* port = NULL);
 	int DownloadFile(string filename, string ip, int port);
 
 	int SendFile();
@@ -54,11 +57,14 @@ private:
 	int m_iPeerThreadPoolNum;
 
 	string m_strPeerFileBufferDir;
+	string m_strPeerFileDownloadDir;
 
 	int m_iTestMode; 
 
 	vector<string> m_vecIp;
 	vector<int> m_vecPort;
+
+	vector<FilePeer> m_vecTestFilePeer;
 
 	Sem* m_semRequest;
 	Mutex* m_mtxRequest;
