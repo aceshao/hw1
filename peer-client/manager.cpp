@@ -169,9 +169,10 @@ int Manager::Loop()
 			int iRet = m_pSocket->Accept(s);
 			if(iRet < 0)
 			{
-				cout<<"socket accept failed"<<endl;
+				cout<<"socket accept failed: ["<<errno<<"]"<<endl;
 				continue;
 			}
+			s->SetSockAddressReuse(true);
 			m_mtxRequest->Lock();
 			m_rq.push(s);
 			m_semRequest->Post();
@@ -626,12 +627,14 @@ int Manager::DownloadFile(string filename, string ip, int port)
 	msg = (MsgPkg*)szBuffer;
 	if(msg->msgcmd != MSG_CMD_DOWNLOAD_RESPONSE)
 	{
+		downloadSocket.Close();
 		cout<<"download response cmd error"<<endl;
 		return -1;
 	}
 	
 	if(msg->msglength < 0)
 	{
+		downloadSocket.Close();
 		cout<<"peer server ip: "<<ip<<" port: "<<port<<" does not contain file: "<< filename<<endl;
 		return 0;
 	}
@@ -653,6 +656,7 @@ int Manager::DownloadFile(string filename, string ip, int port)
 		out.close();
 		delete [] file;
 	}
+	downloadSocket.Close();
 	return 0;
 }
 
@@ -679,19 +683,20 @@ void* UserCmdProcess(void* arg)
 		mgr->DownloadFile_TEST();
 
 
-		cout<<"TEST DONE!"<<endl;
+		cout<<"TEST DATA ARE BELOW!"<<endl;
 		cout<<"Register file number: ["<< mgr->m_iRegisterCount << "] cost time: [" << mgr->m_iRegisterTestTimeelaspe << "]us" <<endl;
 		if(mgr->m_iRegisterCount > 0)
 			cout<<"Register average time: [" << mgr->m_iRegisterTestTimeelaspe/mgr->m_iRegisterCount <<"]"<<endl; 
 
 		cout<<"Search file number: ["<< mgr->m_iSearchCount << "] cost time: [" << mgr->m_iSearchTestTimeelaspe<< "]us" <<endl;
 		if(mgr->m_iSearchCount > 0)
-			cout<<"Register average time: [" << mgr->m_iSearchTestTimeelaspe/mgr->m_iSearchCount<<"]"<<endl; 
+			cout<<"Search average time: [" << mgr->m_iSearchTestTimeelaspe/mgr->m_iSearchCount<<"]"<<endl; 
 
-		cout<<"download file number: ["<< mgr->m_iDownloadCount<< "] cost time: [" << mgr->m_iDownloadTestTimeelaspe<< "]us" <<endl;
+		cout<<"Download file number: ["<< mgr->m_iDownloadCount<< "] cost time: [" << mgr->m_iDownloadTestTimeelaspe<< "]us" <<endl;
 		if(mgr->m_iDownloadCount> 0)
-			cout<<"Register average time: [" << mgr->m_iDownloadTestTimeelaspe/mgr->m_iDownloadCount<<"]"<<endl; 
+			cout<<"Download average time: [" << mgr->m_iDownloadTestTimeelaspe/mgr->m_iDownloadCount<<"]"<<endl; 
 
+		cout<<"TEST DONE SUCEFULLY"<<endl;
 		return 0;
 	}
 

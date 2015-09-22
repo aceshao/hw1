@@ -1,8 +1,10 @@
 #! /bin/sh
-indexfilename="0.log"
+# useage
+# ./createFileTest.sh 1 1000 client.log
+indexfilename=$3
 content=""
-i=1;
-max=$1;
+i=$1;
+max=$2;
 while [ $i -le $max ];
 do
 name=`printf "%d.log" $i`;
