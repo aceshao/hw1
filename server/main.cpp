@@ -46,16 +46,31 @@ int main(int argc, char* argv[])
 	{
 		Manager manager(argv[1]);
 		manager.Start();
+
+		while(1)
+		{
+	           sleep(2);
+	           if(manager->IsStoped())
+	           {
+	           		printf("Restarted!!!!");
+	           		manager.Start();
+	           }
+		}
 	}
 	else
 	{
 		Manager manager;
 		manager.Start();
-	}
-	
-	while(1)
-	{
-           sleep(2);
+
+		while(1)
+		{
+	           sleep(2);
+	           if(manager->IsStoped())
+	           {
+	           		printf("Restarted!!!!");
+	           		manager.Start();
+	           }
+		}
 	}
 	
 	// it should never return

@@ -43,6 +43,7 @@ public:
 	~Manager();
 
 	int Start();
+	int IsStoped();
 
 protected:
 	int Init();
@@ -62,6 +63,8 @@ private:
 	Mutex* m_mtxRequest;
 	
 	Mutex* m_mtxSock;
+
+	int m_iPid;
 
 	vector<Thread*> m_vecProcessThread;
 };

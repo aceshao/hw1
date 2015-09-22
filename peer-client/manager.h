@@ -27,6 +27,7 @@ public:
 	~Manager();
 
 	int Start();
+	int IsStoped();
 
 protected:
 	int Init();
@@ -72,12 +73,13 @@ private:
 	vector<Thread*> m_vecProcessThread;
 	Thread* m_pUserProcess;
 	
+	int m_iPid;
 	unsigned int m_iRegisterTestTimeelaspe;
-       	unsigned int m_iRegisterCount;
-        unsigned int  m_iSearchTestTimeelaspe;
-        unsigned int m_iSearchCount;
-        unsigned int m_iDownloadTestTimeelaspe;
-        unsigned int m_iDownloadCount;
+    unsigned int m_iRegisterCount;
+    unsigned int  m_iSearchTestTimeelaspe;
+    unsigned int m_iSearchCount;
+    unsigned int m_iDownloadTestTimeelaspe;
+    unsigned int m_iDownloadCount;
 
 };
 

@@ -11,11 +11,13 @@
 #include <fstream>
 #include <sys/time.h>
 #include <arpa/inet.h>
+#include <signal.h>
 
 using namespace std;
 
 Manager::Manager(string configfile)
 {
+	m_iPID = 0;
 	m_pSocket = NULL;
 	m_pClientSock = NULL;
 	m_semRequest = NULL;
@@ -89,13 +91,13 @@ Manager::~Manager()
 
 int Manager::Start()
 {
-	int pid = fork();
-	if(pid == -1)
+	m_iPID = fork();
+	if(m_iPID == -1)
 	{
 		cout<<"fork failed"<<endl;
 		return -1;
 	}
-	else if (pid == 0)
+	else if (m_iPID == 0)
 	{
 		if(Init() < 0)
 		{
@@ -110,6 +112,20 @@ int Manager::Start()
 		Loop();
 	}
 	return 0;
+}
+
+int  Manager::IsStoped()
+{
+	int result = ::kill(m_iPID, 0);
+	if (0 == result || errno != ESRCH)
+	{
+		return false;
+	}
+	else	
+	{
+		m_iPID=0;
+		return true;
+	}
 }
 
 int Manager::Init()
