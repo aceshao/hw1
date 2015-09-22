@@ -311,7 +311,6 @@ void* Process(void* arg)
 
 				vector<PeerInfo*> vecpi;
 				pmgr->m_pResMan.LookUp(searchFilename, vecpi);
-				cout<<"here"<<endl;
 
 				if(vecpi.size() == 0)
 				{
@@ -345,7 +344,6 @@ void* Process(void* arg)
 						msg->msglength += vecpi[i]->ip.length(); // FOR IP LENGTH
 					}
 				}
-				cout<<"length "<<msg->msglength<<endl;
 				client->Send(Back, msg->msglength + sizeof(MsgPkg));
 				client->Close();
 				delete [] Back;

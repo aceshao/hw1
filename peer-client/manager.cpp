@@ -401,7 +401,7 @@ int Manager::SearchFile(string filename)
 		//string files = searchResult;
 		cout<<"Get the search result: ["<<searchResult<<"]"<<endl;
 		char* temp = NULL;
-		bool isIp = true;
+		bool isIp = false;
 		char* brkt = NULL;
 		for(temp = strtok_r(searchResult, &SPLIT_CHARACTER, &brkt); temp; temp = strtok_r(NULL, &SPLIT_CHARACTER, &brkt))
 		{
