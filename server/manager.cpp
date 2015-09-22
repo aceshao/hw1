@@ -50,10 +50,8 @@ int ResourceManager::LookUp(string filename, PeerInfo** pi)
 	{
 		for(unsigned int j = 0; j < m_vecPeerInfo[i]->files.size(); j++)
 		{
-			cout<<"server file: ["<<m_vecPeerInfo[i]->files[j]<<"]"<<endl;
 			if(m_vecPeerInfo[i]->files[j] == filename)
 			{
-				cout<<"found.....!!!!"<<endl;
 				*pi = m_vecPeerInfo[i];
 				m_mtxResource->Unlock();
 				return 0;				
@@ -73,6 +71,7 @@ int ResourceManager::LookUp(string filename, vector<PeerInfo*>& vecpi)
 		{
 			if(m_vecPeerInfo[i]->files[j] == filename)
 			{
+				cout<<"Found the file: ["<<filename<<"]"<<endl;
 				vecpi.push_back(m_vecPeerInfo[i]);
 				break;
 			}
@@ -90,8 +89,10 @@ int ResourceManager::Update(PeerInfo* pi)
 	{
 		if(pi->ip == m_vecPeerInfo[i]->ip && pi->port == m_vecPeerInfo[i]->port)
 		{
-			m_vecPeerInfo.erase(m_vecPeerInfo.begin() + i);
-			m_vecPeerInfo.push_back(pi);
+			for(unsigned int j = 0; j < pi->files.size(); j++)
+			{
+				m_vecPeerInfo[i]->files.push_back(pi->files[j]);
+			}
 			m_mtxResource->Unlock();
 			return 0;
 		}

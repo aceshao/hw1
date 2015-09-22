@@ -21,6 +21,13 @@ Manager::Manager(string configfile)
 	m_semRequest = NULL;
 	m_mtxRequest = NULL;
 	m_pUserProcess = NULL;
+	
+	m_iRegisterTestTimeelaspe = 0;
+	m_iRegisterCount = 0;
+	m_iSearchTestTimeelaspe = 0;
+	m_iSearchCount = 0;
+	m_iDownloadTestTimeelaspe = 0;
+	m_iDownloadCount = 0;
 
 	Config* config = Config::Instance();
 	if( config->ParseConfig(configfile.c_str(), "SYSTEM") != 0)
@@ -402,7 +409,6 @@ int Manager::Register_TEST()
 		bzero(szBack, sizeof(MsgPkg));
 		m_pClientSock->Recv(szBack, sizeof(MsgPkg));
 		msg = (MsgPkg*)szBack;
-		int iRet = 0;
 		if(msg->msgcmd == MSG_CMD_REGISTER && msg->msglength == 0)
 		{
 			count++;
@@ -418,16 +424,17 @@ int Manager::Register_TEST()
 
 	struct timeval end;
 	gettimeofday(&end, NULL);
-	unsigned int timeelaspe = 1000000*end.tv_sec + end.tv_usec - begin.tv_usec - 1000000*begin.tv_sec;
-	cout<<"Register total file:["<<count<<"] and cost: ["<< timeelaspe <<"] us"<<endl;
-	if(count > 0)
-		cout<<"Average time: [" << timeelaspe/count <<"]us"<<endl;
+	m_iRegisterTestTimeelaspe = 1000000*end.tv_sec + end.tv_usec - begin.tv_usec - 1000000*begin.tv_sec;
+	m_iRegisterCount = count;
+	cout<<"Register total file:["<<count<<"] and cost: ["<< m_iRegisterTestTimeelaspe<<"] us"<<endl;
+	if(m_iRegisterCount > 0)
+		cout<<"Average time: [" << m_iRegisterTestTimeelaspe/m_iRegisterCount<<"]us"<<endl;
 	return 0;
 }
 
 int Manager::SearchFile_TEST()
 {
-	cout<<"Please input the search file full path name"<<endl;
+	cout<<"Please input the search index file full path name"<<endl;
 	string searchFile = "";
 	cin>>searchFile;
 
@@ -445,26 +452,27 @@ int Manager::SearchFile_TEST()
 	for(file = strtok(buffer, &SPLIT_FILE); file; file = strtok(NULL, &SPLIT_FILE))
 	{
 		FilePeer fp;
-		fp.filename = file;
+		fp.filename = trim(file);
 		fp.ip = "";
 		fp.port = 0;
 		m_vecTestFilePeer.push_back(fp);
 	}
 
 	struct timeval begin;
-	gettimeofday(&begin);
+	gettimeofday(&begin, NULL);
 	for(unsigned int i = 0; i < m_vecTestFilePeer.size(); i++)
 	{
-		searchFile(m_vecTestFilePeer[i].filename, &m_vecTestFilePeer[i].ip, &m_vecTestFilePeer[i].port);
+		SearchFile(m_vecTestFilePeer[i].filename, &m_vecTestFilePeer[i].ip, &m_vecTestFilePeer[i].port);
 	}
 
 	struct timeval end;
-	gettimeofday(&end);
-	unsigned int timeelaspe = 1000000*end.tv_sec + end.tv_usec - begin.tv_usec - 1000000*begin.tv_sec;
+	gettimeofday(&end, NULL);
+	m_iSearchTestTimeelaspe = 1000000*end.tv_sec + end.tv_usec - begin.tv_usec - 1000000*begin.tv_sec;
+	m_iSearchCount = m_vecTestFilePeer.size();
 
-	cout<<"Search total file: ["<<m_vecTestFilePeer.size()<<"]and cost: ["<< timeelaspe <<"] us"<<endl;
-	if(m_vecTestFilePeer.size() > 0)
-	cout<<"Average time: [" << timeelaspe/m_vecTestFilePeer.size() <<"]us"<<endl;
+	cout<<"Search total file: ["<<m_iSearchCount<<"]and cost: ["<< m_iSearchTestTimeelaspe<<"] us"<<endl;
+	if(m_iSearchCount > 0)
+	cout<<"Average time: [" << m_iSearchTestTimeelaspe/m_iSearchCount <<"]us"<<endl;
 
 	return 0;
 }
@@ -478,6 +486,7 @@ int Manager::SearchFile(string filename, string* ip, int* port)
 	msg->msgcmd = MSG_CMD_SEARCH;
 	msg->msglength = filename.length();
 	strncpy((char*)msg+sizeof(MsgPkg), filename.c_str(), filename.length());
+	cout<<"Search filename: [" << filename<<"]"<<endl;
 	
 	m_pClientSock->Create();
 
@@ -523,7 +532,7 @@ int Manager::SearchFile(string filename, string* ip, int* port)
 		}
 
 		//string files = searchResult;
-		cout<<"Get the search result: ["<<searchResult<<"]"<<endl;
+		cout<<"Get the search result: ["<<searchResult<<"]"<<filename<<endl;
 		char* temp = NULL;
 		bool isIp = false;
 		char* brkt = NULL;
@@ -541,8 +550,12 @@ int Manager::SearchFile(string filename, string* ip, int* port)
 			}
 
 		}
-		*ip = m_vecIp[0];
-		*port = m_vecPort[0];
+		
+		if(ip && port)
+		{
+			*ip = m_vecIp[0];
+			*port = m_vecPort[0];
+		}
 		delete [] searchResult;
 	}
 
@@ -554,7 +567,7 @@ int Manager::DownloadFile_TEST()
 {
 	int count = 0;
 	struct timeval begin;
-	gettimeofday(&begin);
+	gettimeofday(&begin, NULL);
 	for(unsigned int i = 0; i < m_vecTestFilePeer.size(); i++)
 	{
 		if(m_vecTestFilePeer[i].ip != "" && m_vecTestFilePeer[i].port != 0)
@@ -565,13 +578,14 @@ int Manager::DownloadFile_TEST()
 	}
 
 	struct timeval end;
-	gettimeofday(&end);
+	gettimeofday(&end, NULL);
 
-	unsigned int timeelaspe = 1000000*end.tv_sec + end.tv_usec - begin.tv_usec - 1000000*begin.tv_sec;
-
-	cout<<"Download total file: ["<<count<<"]and cost: ["<< timeelaspe <<"] us"<<endl;
-	if(count > 0)
-	cout<<"Average time: [" << timeelaspe/count <<"]us"<<endl;
+	m_iDownloadTestTimeelaspe = 1000000*end.tv_sec + end.tv_usec - begin.tv_usec - 1000000*begin.tv_sec;
+	m_iDownloadCount = count;
+	cout<<"Download total file: ["<<m_iDownloadCount<<"]and cost: ["<< m_iDownloadTestTimeelaspe<<"] us"<<endl;
+	if(m_iDownloadCount > 0)
+	cout<<"Average time: [" << m_iDownloadTestTimeelaspe/m_iDownloadCount<<"]us"<<endl;
+	return 0;
 }
 
 int Manager::DownloadFile(string filename, string ip, int port)
@@ -633,7 +647,7 @@ int Manager::DownloadFile(string filename, string ip, int port)
 		}
 
 		ofstream out;
-		filefullpath = m_strPeerFileDownloadDir + filename;
+		string filefullpath = m_strPeerFileDownloadDir + filename;
 		out.open(filefullpath.c_str(), ios::out|ios::binary);
 		out.write(file, msg->msglength);
 		out.close();
@@ -660,6 +674,24 @@ void* UserCmdProcess(void* arg)
 
 		cout<<"BEGIN to search file test"<<endl;
 		mgr->SearchFile_TEST();
+
+		cout<<"BEGIN to downloadfile test"<<endl;
+		mgr->DownloadFile_TEST();
+
+
+		cout<<"TEST DONE!"<<endl;
+		cout<<"Register file number: ["<< mgr->m_iRegisterCount << "] cost time: [" << mgr->m_iRegisterTestTimeelaspe << "]us" <<endl;
+		if(mgr->m_iRegisterCount > 0)
+			cout<<"Register average time: [" << mgr->m_iRegisterTestTimeelaspe/mgr->m_iRegisterCount <<"]"<<endl; 
+
+		cout<<"Search file number: ["<< mgr->m_iSearchCount << "] cost time: [" << mgr->m_iSearchTestTimeelaspe<< "]us" <<endl;
+		if(mgr->m_iSearchCount > 0)
+			cout<<"Register average time: [" << mgr->m_iSearchTestTimeelaspe/mgr->m_iSearchCount<<"]"<<endl; 
+
+		cout<<"download file number: ["<< mgr->m_iDownloadCount<< "] cost time: [" << mgr->m_iDownloadTestTimeelaspe<< "]us" <<endl;
+		if(mgr->m_iDownloadCount> 0)
+			cout<<"Register average time: [" << mgr->m_iDownloadTestTimeelaspe/mgr->m_iDownloadCount<<"]"<<endl; 
+
 		return 0;
 	}
 
