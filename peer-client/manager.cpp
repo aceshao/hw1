@@ -10,6 +10,7 @@
 #include "tools.h"
 #include <fstream>
 #include <sys/time.h>
+#include <arpa/inet.h>
 
 using namespace std;
 
@@ -352,28 +353,28 @@ int Manager::Register_TEST()
 	DIR* dir = NULL;
 	struct dirent* direntry;
 
-	char* registerPkg = new char[MAX_PKG_LEN];
-	char* szBack = new char[sizeof(MsgPkg)];
-	MsgPkg* msg = (MsgPkg*)registerPkg;
-	msg->msgcmd = MSG_CMD_REGISTER;
-	msg->msglength = 4;
-	RegisterPkg* reg = (RegisterPkg*)(registerPkg + sizeof(MsgPkg));
-	reg->port = m_iPeerPort;
 
 	cout<<"please input the directory to register"<<endl;
 	cin >> dirname;
 	if((dir = opendir(dirname.c_str())) == NULL)
 	{
 		cout<<"Sorry! can not open this directory: "<<dirname<<endl;
-		delete [] registerPkg;
 		return -1;
 	}
 	int count = 0;
 	struct timeval begin;
-	gettimeofday(&begin);
+	gettimeofday(&begin, NULL);
 	while((direntry = readdir(dir)) != NULL)
 	{
+		char* registerPkg = new char[MAX_PKG_LEN];
+		bzero(registerPkg, MAX_PKG_LEN);
+		char* szBack = new char[sizeof(MsgPkg)];
+		MsgPkg* msg = (MsgPkg*)registerPkg;
+		msg->msgcmd = MSG_CMD_REGISTER;
+		RegisterPkg* reg = (RegisterPkg*)(registerPkg + sizeof(MsgPkg));
+		reg->port = m_iPeerPort;
 		int offset = 0;
+		msg->msglength = 4;
 		if(direntry -> d_type != DT_REG)
 			continue;
 		string nametemp = direntry->d_name;
@@ -385,6 +386,7 @@ int Manager::Register_TEST()
 		msg->msglength += 4;
 		msg->msglength += nametemp.length();
 
+		m_pClientSock->Create();
 		if( m_pClientSock->Connect() != 0)
 		{
 			cout<<"connect to index server failed"<<endl;
@@ -392,7 +394,8 @@ int Manager::Register_TEST()
 			return -1;		
 		}
 
-		m_pClientSock->Send(registerPkg, sizeof(MsgPkg) + msg->msglength);
+		int length = msg->msglength;
+		m_pClientSock->Send(registerPkg, sizeof(MsgPkg) + length);
 		
 		bzero(szBack, sizeof(MsgPkg));
 		m_pClientSock->Recv(szBack, sizeof(MsgPkg));
@@ -400,30 +403,28 @@ int Manager::Register_TEST()
 		int iRet = 0;
 		if(msg->msgcmd == MSG_CMD_REGISTER && msg->msglength == 0)
 		{
-			cout<<"Register Success. register total file number:" <<count<<endl;
-			iRet = 0;		
+			count++;
 		}
 		else
 		{
 			cout<<"Register Failed"<<endl;
-			iRet = -1;
 		}
 		m_pClientSock->Close();
-
-		count++;
+		delete [] registerPkg;
+		delete [] szBack;
 	}
 
 	
 
 	
-	delete [] registerPkg;
-	delete [] szBack;
 
 	struct timeval end;
-	gettimeofday(&end);
-	int timeelaspe = 1000*(end.tv_sec - begin.tv_sec) + (end.tv_usec - begin.tv_usec);
-	cout<<"Register total file:["<<count<<"] and cost: ["<< timeelaspe <<"] ms"<<endl;
-	return iRet;
+	gettimeofday(&end, NULL);
+	int timeelaspe = 1000000*end.tv_sec + end.tv_usec - begin.tv_usec - 1000000*begin.tv_sec;
+	cout<<"Register total file:["<<count<<"] and cost: ["<< timeelaspe <<"] us"<<endl;
+	if(count > 0)
+		cout<<"Average time: [" << timeelaspe/count <<"]us"<<endl;
+	return 0;
 }
 
 
@@ -586,7 +587,7 @@ void* UserCmdProcess(void* arg)
 		cout<<"This is in TEST MODE"<<endl;
 
 		// calculate the average time for registeration
-		Register_TEST();
+		mgr->Register_TEST();
 
 		return 0;
 	}
@@ -629,7 +630,7 @@ void* UserCmdProcess(void* arg)
 		}
 		
 		cout<<"Search file: "<<filename<< "success"<<endl;
-		for(int i = 0; i < mgr->m_vecIp.size(); i++)
+		for(unsigned int i = 0; i < mgr->m_vecIp.size(); i++)
 			cout<<"Peer server :"<<mgr->m_vecIp[i] <<" port :"<<mgr->m_vecPort[i]<<" has this file"<<endl;
 
 		cout<<"If you wanna to downlaod, press number to reprensent server (0 represents the first peer server"<<endl;

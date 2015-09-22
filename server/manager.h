@@ -60,6 +60,8 @@ private:
 
 	Sem* m_semRequest;
 	Mutex* m_mtxRequest;
+	
+	Mutex* m_mtxSock;
 
 	vector<Thread*> m_vecProcessThread;
 };

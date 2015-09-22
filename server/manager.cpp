@@ -8,6 +8,7 @@
 #include <sys/epoll.h>
 #include "config.h"
 #include "tools.h"
+#include <arpa/inet.h>
 
 using namespace std;
 
@@ -123,6 +124,7 @@ Manager::Manager(string  configfile)
 	m_pSocket = NULL;
 	m_mtxRequest = NULL;	
 	m_semRequest = NULL;
+	m_mtxSock = NULL;
 	Config* config = Config::Instance();
 	if( config->ParseConfig(configfile.c_str(), "SYSTEM") != 0)
 	{
@@ -192,6 +194,7 @@ int Manager::Init()
 	m_pSocket = new Socket(m_strServerIp.c_str(), m_iServerPort, ST_TCP);
 	m_semRequest = new Sem(0, 0);
 	m_mtxRequest = new Mutex();
+	m_mtxSock = new Mutex();
 	for(int i = 0; i < m_iServerThreadPoolNum; i++)
 	{
 		Thread* thread = new Thread(Process, this);
@@ -272,6 +275,7 @@ void* Process(void* arg)
 		pmgr->m_mtxRequest->Unlock();
 
 		char szBuffer[MSG_HEAD_LEN] = {0};
+		//pmgr->m_mtxSock->Lock();
 		if(client->Recv(szBuffer, MSG_HEAD_LEN) != MSG_HEAD_LEN)
 		{
 			cout<<"recv failed"<<endl;
@@ -286,11 +290,13 @@ void* Process(void* arg)
 			if(client->Recv(szData, msg->msglength) != msg->msglength)
 			{
 				cout<<"recv failed"<<endl;
+		//		pmgr->m_mtxSock->Unlock();
 				client->Close();
 				delete [] szData;
 				continue;
 			}
 		}
+		//pmgr->m_mtxSock->Unlock();
 
 		switch(msg->msgcmd)
 		{
@@ -360,14 +366,14 @@ void* Process(void* arg)
 				pi->port = reg->port;
 				cout<<"register ip["<<pi->ip<<"] port["<<pi->port<<"]"<<endl;
 
-				string filenames = reg->filename;
+				string filenames = reg->filename; 
 				int index = 0;
 				for(; index < msg->msglength - 4; )
 				{
 					int filenameLen = atoi(filenames.substr(index, 4).c_str());
 					index += 4;
 					pi->files.push_back(filenames.substr(index, filenameLen));
-					cout<<"push_back filename: "<<filenames.substr(index, filenameLen)<<endl;
+					cout<<"Register filename: [" << filenames.substr(index, filenameLen)<<"]"<<endl;
 					index += filenameLen;
 				}
 
