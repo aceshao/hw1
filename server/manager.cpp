@@ -7,6 +7,7 @@
 #include "manager.h"
 #include <sys/epoll.h>
 #include "config.h"
+#include "tools.h"
 
 using namespace std;
 
@@ -71,7 +72,7 @@ int ResourceManager::LookUp(string filename, vector<PeerInfo*>& vecpi)
 		{
 			if(m_vecPeerInfo[i]->files[j] == filename)
 			{
-				vecpi.push_back(m_vecPeerInfo[j]);
+				vecpi.push_back(m_vecPeerInfo[i]);
 				break;
 			}
 		}
@@ -309,7 +310,8 @@ void* Process(void* arg)
 				//pmgr->m_pResMan.LookUp(searchFilename, &pi);
 
 				vector<PeerInfo*> vecpi;
-				pmgr->m_pResMan.LookUp(searchFilename, vecpi)
+				pmgr->m_pResMan.LookUp(searchFilename, vecpi);
+				cout<<"here"<<endl;
 
 				if(vecpi.size() == 0)
 				{
@@ -325,27 +327,28 @@ void* Process(void* arg)
 					break;
 				}
 
-				char* szBack = new char[MAX_PKG_LEN];
+				char* Back = new char[MAX_PKG_LEN];
+				MsgPkg* msg = (MsgPkg*)Back;
+				msg->msgcmd = MSG_CMD_SEARCH_RESPONSE;
+				msg->msglength = 0;
 				// peer node exist && status ok && ack time ok
 				for(unsigned int i = 0; i < vecpi.size(); i++)
 				{
-					MsgPkg* msg = (MsgPkg*)szBack;
-					msg->msgcmd = MSG_CMD_SEARCH_RESPONSE;
-					msg->msglength = 0;
 					if( vecpi[i] && vecpi[i]->ps == ONLINE )
 					{
 						// each ip port pair length consists of: port [4] length of ip [4] and ip length[x]
-						strncpy(szBack + sizeof(MsgPkg) +  msg->msglength, iTo4ByteString(vecpi[i]->port).c_str(), MAX_PKG_LEN - msg->msglength);
+						strncpy(Back + sizeof(MsgPkg) +  msg->msglength, iTo4ByteString(vecpi[i]->port).c_str(), 4);
 						msg->msglength += 4; // FOR THE PORT
-						strncpy(szBack + sizeof(MsgPkg) +  msg->msglength, SPLIT_CHARACTER, MAX_PKG_LEN - msg->msglength);
+						strncpy(Back + sizeof(MsgPkg) +  msg->msglength, &SPLIT_CHARACTER, 1);
 						msg->msglength += 1; // FOR SPLIT CHARACTER
-						strncpy(szBack + sizeof(MsgPkg) +  msg->msglength, vecpi[i]->ip.c_str(), MAX_PKG_LEN - msg->msglength);
+						strncpy(Back + sizeof(MsgPkg) +  msg->msglength, vecpi[i]->ip.c_str(), MAX_PKG_LEN - msg->msglength);
 						msg->msglength += vecpi[i]->ip.length(); // FOR IP LENGTH
 					}
 				}
-				client->Send(szBack, pkglen);
-				delete [] szBack;
+				cout<<"length "<<msg->msglength<<endl;
+				client->Send(Back, msg->msglength + sizeof(MsgPkg));
 				client->Close();
+				//delete [] Back;
 				break;
 			}
 			case MSG_CMD_REGISTER:

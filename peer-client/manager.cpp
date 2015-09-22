@@ -326,11 +326,11 @@ int Manager::Register()
 
 	char* szBack = new char[sizeof(MsgPkg)];
 	m_pClientSock->Recv(szBack, sizeof(MsgPkg));
-	MsgPkg* msg = (MsgPkg*)szBack;
+	msg = (MsgPkg*)szBack;
 	int iRet = 0;
 	if(msg->msgcmd == MSG_CMD_REGISTER && msg->msglength == 0)
 	{
-		out<<"Register Success. register total file number:" <<count<<endl;
+		cout<<"Register Success. register total file number:" <<count<<endl;
 		iRet = 0;		
 	}
 	else
@@ -345,7 +345,7 @@ int Manager::Register()
 	return iRet;
 }
 
-int Manager::SearchFile(string filename, string& ip, int& port)
+int Manager::SearchFile(string filename)
 {
 	m_vecIp.clear();
 	m_vecPort.clear();
@@ -388,7 +388,7 @@ int Manager::SearchFile(string filename, string& ip, int& port)
 	}
 	else
 	{
-		char* searchResult = new char[msg->msglength] + 1;
+		char* searchResult = new char[msg->msglength + 1];
 		bzero(searchResult, msg->msglength + 1);
 		if(m_pClientSock->Recv(searchResult, msg->msglength) != msg->msglength)
 		{
@@ -398,11 +398,12 @@ int Manager::SearchFile(string filename, string& ip, int& port)
 			return -1;
 		}
 
-		string files = searchResult;
-		cout<<"Get the search result: ["<<files<<"]"<<endl;
+		//string files = searchResult;
+		cout<<"Get the search result: ["<<searchResult<<"]"<<endl;
 		char* temp = NULL;
 		bool isIp = true;
-		for(temp = strtok(files.c_str(), SPLIT_CHARACTER); temp; temp = strtok(NULL, SPLIT_CHARACTER))
+		char* brkt = NULL;
+		for(temp = strtok_r(searchResult, &SPLIT_CHARACTER, &brkt); temp; temp = strtok_r(NULL, &SPLIT_CHARACTER, &brkt))
 		{
 			if(isIp)
 			{
@@ -524,19 +525,19 @@ void* UserCmdProcess(void* arg)
 		cout<<"Please enter the file name you wanna download"<<endl;
 		cin>>filename;
 
-		string ip = "";
-		int port = 0;
-		if(mgr->SearchFile(filename, ip, port) != 0)
+		if(mgr->SearchFile(filename) != 0)
 		{
 			cout<<"search file: "<<filename<<" failed"<<endl;
 			continue;
 		}
 
-		if(ip == "" && port == 0)
+		if(mgr->m_vecIp.size() == 0)
 		{
 			cout<<"file :"<<filename<<" Not exist"<<endl;
 			continue;
 		}
+		string ip = mgr->m_vecIp.front();
+		int port = mgr->m_vecPort.front();
 		cout<<"Search file: "<<filename<< "success"<<endl;
 		cout<<"Peer server :"<<ip <<" port :"<<port<<" has this file"<<endl;
 
