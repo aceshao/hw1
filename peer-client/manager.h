@@ -34,6 +34,8 @@ protected:
 	int Loop();
 
 	int Register();
+	int Register_TEST();
+
 	int SearchFile(string filename);
 	int DownloadFile(string filename, string ip, int port);
 

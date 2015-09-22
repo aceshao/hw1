@@ -9,6 +9,7 @@
 #include <sys/epoll.h>
 #include "tools.h"
 #include <fstream>
+#include <sys/time.h>
 
 using namespace std;
 
@@ -345,6 +346,87 @@ int Manager::Register()
 	return iRet;
 }
 
+int Manager::Register_TEST()
+{
+	string dirname = "";
+	DIR* dir = NULL;
+	struct dirent* direntry;
+
+	char* registerPkg = new char[MAX_PKG_LEN];
+	char* szBack = new char[sizeof(MsgPkg)];
+	MsgPkg* msg = (MsgPkg*)registerPkg;
+	msg->msgcmd = MSG_CMD_REGISTER;
+	msg->msglength = 4;
+	RegisterPkg* reg = (RegisterPkg*)(registerPkg + sizeof(MsgPkg));
+	reg->port = m_iPeerPort;
+
+	cout<<"please input the directory to register"<<endl;
+	cin >> dirname;
+	if((dir = opendir(dirname.c_str())) == NULL)
+	{
+		cout<<"Sorry! can not open this directory: "<<dirname<<endl;
+		delete [] registerPkg;
+		return -1;
+	}
+	int count = 0;
+	struct timeval begin;
+	gettimeofday(&begin);
+	while((direntry = readdir(dir)) != NULL)
+	{
+		int offset = 0;
+		if(direntry -> d_type != DT_REG)
+			continue;
+		string nametemp = direntry->d_name;
+		//strncpy(reg->filename + offset, iTo4ByteString(direntry->d_reclen).c_str(), 4);
+		strncpy(reg->filename + offset, iTo4ByteString(nametemp.length()).c_str(), 4);
+		offset += 4;
+		strncpy(reg->filename + offset, direntry->d_name, nametemp.length());
+		offset += nametemp.length();
+		msg->msglength += 4;
+		msg->msglength += nametemp.length();
+
+		if( m_pClientSock->Connect() != 0)
+		{
+			cout<<"connect to index server failed"<<endl;
+			delete [] registerPkg;
+			return -1;		
+		}
+
+		m_pClientSock->Send(registerPkg, sizeof(MsgPkg) + msg->msglength);
+		
+		bzero(szBack, sizeof(MsgPkg));
+		m_pClientSock->Recv(szBack, sizeof(MsgPkg));
+		msg = (MsgPkg*)szBack;
+		int iRet = 0;
+		if(msg->msgcmd == MSG_CMD_REGISTER && msg->msglength == 0)
+		{
+			cout<<"Register Success. register total file number:" <<count<<endl;
+			iRet = 0;		
+		}
+		else
+		{
+			cout<<"Register Failed"<<endl;
+			iRet = -1;
+		}
+		m_pClientSock->Close();
+
+		count++;
+	}
+
+	
+
+	
+	delete [] registerPkg;
+	delete [] szBack;
+
+	struct timeval end;
+	gettimeofday(&end);
+	int timeelaspe = 1000*(end.tv_sec - begin.tv_sec) + (end.tv_usec - begin.tv_usec);
+	cout<<"Register total file:["<<count<<"] and cost: ["<< timeelaspe <<"] ms"<<endl;
+	return iRet;
+}
+
+
 int Manager::SearchFile(string filename)
 {
 	m_vecIp.clear();
@@ -426,7 +508,7 @@ int Manager::SearchFile(string filename)
 
 int Manager::DownloadFile(string filename, string ip, int port)
 {
-	cout<<"begin to download"<<endl;
+	cout<<"Begin to download from server: ["<< ip<<"] port: [" <<port<<"]"<< endl;
 	char downloadPkg[MAX_PKG_LEN] = {0};
 	MsgPkg* msg = (MsgPkg*)downloadPkg;
 	msg->msgcmd = MSG_CMD_DOWNLOAD;
@@ -499,6 +581,16 @@ void* UserCmdProcess(void* arg)
 	cout<<"wanna to connect server["<<mgr->m_strServerIp<<"] and port: ["<<mgr->m_iServerPort<<"]"<<endl;
 	mgr->m_pClientSock->Create();
 
+	if(mgr->m_iTestMode != 0)
+	{
+		cout<<"This is in TEST MODE"<<endl;
+
+		// calculate the average time for registeration
+		Register_TEST();
+
+		return 0;
+	}
+
 	while(1)
 	{	
 		if(mgr->Register() != 0)
@@ -513,7 +605,6 @@ void* UserCmdProcess(void* arg)
 		}
 		else
 		{
-			cout<<"Register success"<<endl;
 			break;
 		}
 	}
@@ -536,18 +627,23 @@ void* UserCmdProcess(void* arg)
 			cout<<"file :"<<filename<<" Not exist"<<endl;
 			continue;
 		}
-		string ip = mgr->m_vecIp.front();
-		int port = mgr->m_vecPort.front();
+		
 		cout<<"Search file: "<<filename<< "success"<<endl;
-		cout<<"Peer server :"<<ip <<" port :"<<port<<" has this file"<<endl;
+		for(int i = 0; i < mgr->m_vecIp.size(); i++)
+			cout<<"Peer server :"<<mgr->m_vecIp[i] <<" port :"<<mgr->m_vecPort[i]<<" has this file"<<endl;
 
-		cout<<"If you wanna to downlaod, press y"<<endl;
-		char respond;
+		cout<<"If you wanna to downlaod, press number to reprensent server (0 represents the first peer server"<<endl;
+		int respond;
 		cin>>respond;
 
-		if(respond != 'y' && respond != 'Y')
+		if(respond < 0 || respond >= mgr->m_vecIp.size())
+		{
+			cout<<"You wanna to downlaod from the server which is non exist"<<endl;
 			continue;
+		}
 
+		string ip = mgr->m_vecIp[respond];
+		int port = mgr->m_vecPort[respond];
 		if(mgr->DownloadFile(filename, ip, port) != 0)
 		{
 			cout<<"download file failed"<<endl;
