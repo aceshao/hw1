@@ -1,0 +1,10 @@
+1. This program use threads and sockets to implement, so can I get 10 extra credits?
+
+2. Also it supports Binary files download, so can I get 5 more extra credits?
+
+3. For data replication, I think there are a lot can be done in the p2p system. Basically, We would like to make sure the server is robost enough, or the server can have multiple copies in case of one down, the others can take its job. For data files, we may wanna to have at least more than 1 copy. Also, we may wanna the server to notice the client's offline immediately thus provide exactly info to peer client. 
+
+What this program implemented is the server and client rebost. Each side would have two processes, one process consists of many threads to do the normal job, another process would continuely monitor this process. The idea is that the multi threads' procsss is more easy to core or iterrupt, in this case, the other process can immediately pull it up and restart the service. So can I get 10 more extra credits?
+
+
+

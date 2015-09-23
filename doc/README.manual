@@ -1,0 +1,82 @@
+// This file is the HW1 manual
+// copyright by zhen shao
+// 09/20/2015
+
+--**** What is the file structure for this program? ****--
+The file structure is:
+	-hw1
+		-build			contains the MAKEFILE
+		-common   		contains the common used library
+		-config   		contains the config file. The default value is on purpose for test. Please change when need
+		-doc	  		contains the documentation
+		-peer-client 	contains the peer client source code
+		-server 		contains the index server source code
+		-test1			contains directory file and download. Test use
+		-test2			contains directory file and download. Test use
+		-test3			contains directory file and download. Test use
+
+For one more thing, since for test purpose, we need some files to register and download, there is a script named createTestFile.sh in the /test1/file/ directory, which can be used to generate test file.
+The useage is: ./createTestFile beginNum endNum indexFileName
+For example: ./createTestFile 1 1000 client1.index
+which will generate 1000 files named 1.log to 1000.log and also a file named client1.index which contains all the 1-1000.log names used to be index.
+
+
+--**** What should be parpared before I run this program? ****--
+There are three types of directory usde in this program for purpose of Register, Download
+1. The Register file directory: It is specified when you run the program, the program would ask for this info
+2. The directory you peer would access from where other peers download files: It is specified in the config file by name 'filebufferdir'. The default value is './file/'. 
+3. The download directory is when you download a file, it would be put into this directory. It is specified in the config file by name 'downloaddir'. The default value is './download'.
+
+After unzip, you should get above file structure in hw1.
+And please parpare the directory 2 and directory 3. If you use your own test file directory, then you need to modify the config file. If you use this default directory, then nothing to do since for 3 peer test it is now be created.
+
+
+--**** How to compiler the program? ****--
+Assume you are in the hw1 directory
+	cd build
+	make clean;make
+
+After this command, you would automatically has executable peer-client in test1/test2/test3
+
+--**** What does the config file contains and how to change? ****--
+The server config should contain:
+	serverip = 127.0.0.1  // this is the server ip
+	bindport = 5551			// this is the server port server listen on
+	threadnum = 6			// this is the number of threads server pool would have
+
+The client config should contain:
+	serverip = 127.0.0.1   // this is the server ip
+	serverport = 5551		// this is the server port the client would like to connect
+	peerip = 127.0.0.1 		// this is the peer client ip from where download file
+	peerport = 5556			// this is the peer client port from where download file
+	threadnum = 6			// this is the peer client threads number which serves as transfer file in the request of download
+	filebufferdir = ./file/		// this is the directory the peer client used to register files to server
+	downloaddir = ./download/	// this is the directory the peer client used to keep the downloaded files from other peers
+	testmode = 0				//	this is a flag used to specify whether it is in test mode. Only if 0, then not in test mode.
+
+
+--**** How to run the program ****--
+After make, and change the config file if need,
+First, start the server in build directory: ./index_server ../config/server.config
+Second, start the client in each test directory: cd test1; ./client ../config/client1.config
+
+Then server side is done.
+But the client side still needs you to input something, this is a interactive progress. You would be asked:
+1. input the Register file directory    -- then it will register all the files in that directory to index server
+2. input the file you wanna download
+3. input from which source you would like to download the file
+
+
+--*** How to start the test mode, that's to say, the Performance evaluation? ****--
+Change the config file for each client. Modify the 'testmode's value to 1.
+Then it will automatically change to the testmode
+
+--**** Other resource to consider? ****--
+The output file can be viewed about the program process.
+
+
+
+
+
+
+

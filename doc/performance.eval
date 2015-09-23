@@ -1,0 +1,42 @@
+////////////////////////////////////////////////
+TEST DATA ARE BELOW!
+Register file number: [1002] cost time: [298015511]us
+Register average time: [297420]
+Search file number: [1000] cost time: [299809735]us
+Search average time: [299809]
+Download file number: [1000] cost time: [100853943]us
+Download average time: [100853]
+TEST DONE SUCEFULLY
+////////////////////////////////////////////////
+
+The above test result is based on: three peer clients concurrently each register 1000 files, search 1000 files, and download 1000 files in the invironment of one Vm, with each components on different ports;
+
+
+
+////////////////////////////////////////////////
+TEST DATA ARE BELOW!
+Register file number: [1002] cost time: [101217441]us
+Register average time: [101015]
+Search file number: [1000] cost time: [101046043]us
+Search average time: [101046]
+Download file number: [1000] cost time: [100742606]us
+Download average time: [100742]
+TEST DONE SUCEFULLY
+////////////////////////////////////////////////
+
+The above test reuslt is based on: only one peer client, register 1000 files, search 1000 files, and download 1000 files in the environment of one Vm, with each components on different ports;
+
+
+Conclustion:
+1. The average Register and Search time would be 3 times more when they are 3 clients concurrently comparing with only one client.
+The reason is that the index server side's resource manager is based on Mutex Lock. So the Register and Search requests are needed to be in a line to wait for service. Thus the time is exactly 3 times more when there are 3 concurrent clients.
+
+2. The download average time for each download is about 0.1s, and also the average register and search time for only one client is about 0.1s
+The reason they are consistent is that basically the main cost is the socket, its create, connect, send, recv. So they are almost the same.
+
+3. The download average would not be increased when clients number up
+The reason is that the peer server uses the thread pool, if we config enough threads more than the number of concurrent of clients, then the peer server's thread pool would always has thread to handler the download request from any client. Thus the handler time would be constant.
+
+4. As in design.intro implys, the server side's resource manager maybe can be improved by not using Mutex lock. That is the next step's consideration and improve.
+
+5. Also to mention, the system is robost
